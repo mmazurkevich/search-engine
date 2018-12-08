@@ -41,14 +41,15 @@ public class DocumentIndexTask implements Runnable {
             long start = System.currentTimeMillis();
 
             lines.forEach(line -> tokenizer.tokenize(line).forEach(token -> {
-                TIntHashSet documentIds = index.getValueForExactKey(token);
-                if (documentIds == null) {
-                    documentIds = new TIntHashSet();
-                    documentIds.add(indexingDocument.getId());
-                    index.put(token, documentIds);
-                } else {
-                    documentIds.add(indexingDocument.getId());
-                }
+                index.putMergeOnConflict(token, indexingDocument.getId());
+//                TIntHashSet documentIds = index.getValueForExactKey(token);
+//                if (documentIds == null) {
+//                    documentIds = new TIntHashSet();
+//                    documentIds.add(indexingDocument.getId());
+//                    index.put(token, documentIds);
+//                } else {
+//                    documentIds.add(indexingDocument.getId());
+//                }
             }));
 
             long end = System.currentTimeMillis();

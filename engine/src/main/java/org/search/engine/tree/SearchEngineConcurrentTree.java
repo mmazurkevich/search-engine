@@ -34,30 +34,26 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
 
     // ------------- Helper methods for serializing writes -------------
 
-    protected void acquireWriteLock() {
+    private void acquireWriteLock() {
         writeLock.lock();
     }
 
-    protected void releaseWriteLock() {
+    private void releaseWriteLock() {
         writeLock.unlock();
     }
 
     // ------------- Public API methods -------------
 
-
-    /**
-     * {@inheritDoc}
-     */
     @Override
-    public TIntHashSet put(CharSequence key, TIntHashSet value) {
-        return putInternal(key, value, true);
+    public void putMergeOnConflict(CharSequence key, int value) {
+        put(key, value);
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public TIntHashSet getValueForExactKey(CharSequence key) {
+    public List<Integer> getValueForExactKey(CharSequence key) {
         SearchResult searchResult = searchTree(key);
         if (searchResult.classification.equals(Classification.EXACT_MATCH)) {
             return searchResult.nodeFound.getValue();
@@ -70,106 +66,113 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
         if (value == null) {
             throw new IllegalArgumentException("The key argument was null");
         }
+        acquireWriteLock();
         List<TreeNode> suitableNodes = new ArrayList<>();
         //Breadth-first traversing
         Queue<TreeNode> nodesQueue = new LinkedList<>();
         nodesQueue.add(root);
         TreeNode currentNode;
-        while ((currentNode = nodesQueue.poll()) != null) {
-            List<TreeNode> childNodes = currentNode.getOutgoingEdges();
-            if (childNodes != null && !childNodes.isEmpty()) {
-                nodesQueue.addAll(childNodes);
+        try {
+            while ((currentNode = nodesQueue.poll()) != null) {
+                List<TreeNode> childNodes = currentNode.getOutgoingEdges();
+                if (childNodes != null && !childNodes.isEmpty()) {
+                    nodesQueue.addAll(childNodes);
+                }
+                List<Integer> nodeValue = currentNode.getValue();
+                if (nodeValue != null && nodeValue.contains(value)) {
+                    suitableNodes.add(currentNode);
+                }
             }
-            TIntHashSet nodeValue = currentNode.getValue();
-            if (nodeValue != null && nodeValue.contains(value)) {
-                suitableNodes.add(currentNode);
-            }
+            suitableNodes.forEach(it -> {
+                List<Integer> nodeValue = it.getValue();
+                System.out.println(prettyPrint());
+                if (nodeValue.size() > 1) {
+                    nodeValue.remove(value);
+                } else {
+                    remove(it);
+                }
+            });
+            System.out.println(prettyPrint());
+        } finally {
+            releaseWriteLock();
         }
-        suitableNodes.forEach(it -> {
-            TIntHashSet nodeValue = it.getValue();
-            if (nodeValue.size() > 1) {
-                nodeValue.remove(value);
-            } else {
-                remove(it);
-            }
-        });
 
         return false;
     }
 
     private boolean remove(TreeNode node) {
-        acquireWriteLock();
-        try {
-            // Proceed with deleting the node...
-            List<TreeNode> childEdges = node.getOutgoingEdges();
-            if (childEdges.size() > 1) {
-                // This node has more than one child, so if we delete the value from this node, we still need
-                // to leave a similar node in place to act as the split between the child edges.
-                // Just delete the value associated with this node.
-                // -> Clone this node without its value, preserving its child nodes...
-                TreeNode cloned = createNode(node.getIncomingEdge(), node.parent, null, node.getOutgoingEdges(), false);
-                // Re-add the replacement node to the parent...
-                node.parent.updateOutgoingEdge(cloned);
-            } else if (childEdges.size() == 1) {
-                // Node has one child edge.
-                // Create a new node which is the concatenation of the edges from this node and its child,
-                // and which has the outgoing edges of the child and the value from the child.
-                TreeNode child = childEdges.get(0);
-                CharSequence concatenatedEdges = CharSequencesUtil.concatenate(node.getIncomingEdge(), child.getIncomingEdge());
-                TreeNode mergedNode = createNode(concatenatedEdges, node.parent, child.getValue(), child.getOutgoingEdges(), false);
-                // Re-add the merged node to the parent...
-                node.parent.updateOutgoingEdge(mergedNode);
-            } else {
-                // Node has no children. Delete this node from its parent,
-                // which involves re-creating the parent rather than simply updating its child edge
-                // (this is why we need parentNodesParent).
-                // However if this would leave the parent with only one remaining child edge,
-                // and the parent itself has no value (is a split node), and the parent is not the root node
-                // (a special case which we never merge), then we also need to merge the parent with its
-                // remaining child.
+//            if (node.getValue() == null) {
+//                // This node was created automatically as a split between two branches (implicit node).
+//                // No need to remove it...
+//                return false;
+//            }
+        // Proceed with deleting the node...
+        List<TreeNode> childEdges = node.getOutgoingEdges();
+        if (childEdges.size() > 1) {
+            // This node has more than one child, so if we delete the value from this node, we still need
+            // to leave a similar node in place to act as the split between the child edges.
+            // Just delete the value associated with this node.
+            // -> Clone this node without its value, preserving its child nodes...
+            TreeNode cloned = createNode(node.getIncomingEdge(), node.parent, null, node.getOutgoingEdges(), false);
+            // Re-add the replacement node to the parent...
+            node.parent.updateOutgoingEdge(cloned);
+        } else if (childEdges.size() == 1) {
+            // Node has one child edge.
+            // Create a new node which is the concatenation of the edges from this node and its child,
+            // and which has the outgoing edges of the child and the value from the child.
+            TreeNode child = childEdges.get(0);
+            CharSequence concatenatedEdges = CharSequencesUtil.concatenate(node.getIncomingEdge(), child.getIncomingEdge());
+            TreeNode mergedNode = createNode(concatenatedEdges, node.parent, child.getValue(), child.getOutgoingEdges(), false);
+            // Re-add the merged node to the parent...
+            node.parent.updateOutgoingEdge(mergedNode);
+        } else {
+            // Node has no children. Delete this node from its parent,
+            // which involves re-creating the parent rather than simply updating its child edge
+            // (this is why we need parentNodesParent).
+            // However if this would leave the parent with only one remaining child edge,
+            // and the parent itself has no value (is a split node), and the parent is not the root node
+            // (a special case which we never merge), then we also need to merge the parent with its
+            // remaining child.
 
-                List<TreeNode> currentEdgesFromParent = node.parent.getOutgoingEdges();
-                // Create a list of the outgoing edges of the parent which will remain
-                // if we remove this child...
-                // Use a non-resizable list, as a sanity check to force ArrayIndexOutOfBounds...
-                List<TreeNode> newEdgesOfParent = Arrays.asList(new TreeNode[node.parent.getOutgoingEdges().size() - 1]);
-                for (int i = 0, added = 0, numParentEdges = currentEdgesFromParent.size(); i < numParentEdges; i++) {
-                    TreeNode parentEdgesNode = currentEdgesFromParent.get(i);
-                    if (parentEdgesNode != node) {
-                        newEdgesOfParent.set(added++, parentEdgesNode);
-                    }
-                }
-
-                // Note the parent might actually be the root node (which we should never merge)...
-                boolean parentIsRoot = (node.parent == root);
-                TreeNode newParent;
-                if (newEdgesOfParent.size() == 1 && node.parent.getValue() == null && !parentIsRoot) {
-                    // Parent is a non-root split node with only one remaining child, which can now be merged.
-                    TreeNode parentsRemainingChild = newEdgesOfParent.get(0);
-                    // Merge the parent with its only remaining child...
-                    CharSequence concatenatedEdges = CharSequencesUtil.concatenate(node.parent.getIncomingEdge(), parentsRemainingChild.getIncomingEdge());
-                    newParent = createNode(concatenatedEdges, null, parentsRemainingChild.getValue(), parentsRemainingChild.getOutgoingEdges(), parentIsRoot);
-                } else {
-                    // Parent is a node which either has a value of its own, has more than one remaining
-                    // child, or is actually the root node (we never merge the root node).
-                    // Create new parent node which is the same as is currently just without the edge to the
-                    // node being deleted...
-                    newParent = createNode(node.parent.getIncomingEdge(), null, node.parent.getValue(), newEdgesOfParent, parentIsRoot);
-                }
-                // Re-add the parent node to its parent...
-                if (parentIsRoot) {
-                    // Replace the root node...
-                    this.root = newParent;
-                } else {
-                    // Re-add the parent node to its parent...
-                    newParent.setParent(node.parent.parent);
-                    node.parent.parent.updateOutgoingEdge(newParent);
+            List<TreeNode> currentEdgesFromParent = node.parent.getOutgoingEdges();
+            // Create a list of the outgoing edges of the parent which will remain
+            // if we remove this child...
+            // Use a non-resizable list, as a sanity check to force ArrayIndexOutOfBounds...
+            List<TreeNode> newEdgesOfParent = Arrays.asList(new TreeNode[node.parent.getOutgoingEdges().size() - 1]);
+            for (int i = 0, added = 0, numParentEdges = currentEdgesFromParent.size(); i < numParentEdges; i++) {
+                TreeNode parentEdgesNode = currentEdgesFromParent.get(i);
+                if (parentEdgesNode != node) {
+                    newEdgesOfParent.set(added++, parentEdgesNode);
                 }
             }
-            return true;
-        } finally {
-            releaseWriteLock();
+
+            // Note the parent might actually be the root node (which we should never merge)...
+            boolean parentIsRoot = (node.parent.parent == null);
+            TreeNode newParent;
+            if (newEdgesOfParent.size() == 1 && node.parent.getValue() == null && !parentIsRoot) {
+                // Parent is a non-root split node with only one remaining child, which can now be merged.
+                TreeNode parentsRemainingChild = newEdgesOfParent.get(0);
+                // Merge the parent with its only remaining child...
+                CharSequence concatenatedEdges = CharSequencesUtil.concatenate(node.parent.getIncomingEdge(), parentsRemainingChild.getIncomingEdge());
+                newParent = createNode(concatenatedEdges, null, parentsRemainingChild.getValue(), parentsRemainingChild.getOutgoingEdges(), parentIsRoot);
+            } else {
+                // Parent is a node which either has a value of its own, has more than one remaining
+                // child, or is actually the root node (we never merge the root node).
+                // Create new parent node which is the same as is currently just without the edge to the
+                // node being deleted...
+                newParent = createNode(node.parent.getIncomingEdge(), null, node.parent.getValue(), newEdgesOfParent, parentIsRoot);
+            }
+            // Re-add the parent node to its parent...
+            if (parentIsRoot) {
+                // Replace the root node...
+                this.root = newParent;
+            } else {
+                // Re-add the parent node to its parent...
+                newParent.setParent(node.parent.parent);
+                node.parent.parent.updateOutgoingEdge(newParent);
+            }
         }
+        return true;
     }
 
     /**
@@ -294,21 +297,18 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
      * stored for the same key, either overwrites the existing value, or simply returns the existing value, depending
      * on the given value of the <code>overwrite</code> flag.
      *
-     * @param key       The key against which the value should be stored
-     * @param value     The value to store against the key
-     * @param overwrite If true, should replace any existing value, if false should not replace any existing value
+     * @param key   The key against which the value should be stored
+     * @param value The value to store against the key
      * @return The existing value for this key, if there was one, otherwise null
      */
-    private TIntHashSet putInternal(CharSequence key, TIntHashSet value, boolean overwrite) {
+    private void put(CharSequence key, int value) {
         if (key == null) {
             throw new IllegalArgumentException("The key argument was null");
         }
         if (key.length() == 0) {
             throw new IllegalArgumentException("The key argument was zero-length");
         }
-        if (value == null) {
-            throw new IllegalArgumentException("The value argument was null");
-        }
+
         acquireWriteLock();
         try {
             // Note we search the tree here after we have acquired the write lock...
@@ -323,15 +323,11 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
 
                     // First check if existing node has a value, and if we are allowed to overwrite it.
                     // Return early without overwriting if necessary...
-                    TIntHashSet existingValue = searchResult.nodeFound.getValue();
-                    if (!overwrite && existingValue != null) {
-                        return existingValue;
+                    List<Integer> existingValue = searchResult.nodeFound.getValue();
+                    if (existingValue != null) {
+                        existingValue.add(value);
                     }
-                    // Create a replacement for the existing node containing the new value...
-                    TreeNode replacementNode = createNode(searchResult.nodeFound.getIncomingEdge(), searchResult.nodeFound.getParent(), value, searchResult.nodeFound.getOutgoingEdges(), false);
-                    searchResult.parentNode.updateOutgoingEdge(replacementNode);
-                    // Return the existing value...
-                    return existingValue;
+                    return;
                 }
                 case KEY_ENDS_MID_EDGE: {
                     // Search ran out of characters from the key while in the middle of an edge in the node.
@@ -343,15 +339,17 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
 
                     // Create new nodes...
                     TreeNode newChild = createNode(suffixFromExistingEdge, null, searchResult.nodeFound.getValue(), searchResult.nodeFound.getOutgoingEdges(), false);
-                    TreeNode newParent = createNode(commonPrefix, searchResult.parentNode, value, Arrays.asList(newChild), false);
+
+                    List<Integer> newValues = new ArrayList<>();
+                    newValues.add(value);
+
+                    TreeNode newParent = createNode(commonPrefix, searchResult.parentNode, newValues, Arrays.asList(newChild), false);
                     //Update parent for newly created child
                     newChild.setParent(newParent);
 
                     // Add the new parent to the parent of the node being replaced (replacing the existing node)...
                     searchResult.parentNode.updateOutgoingEdge(newParent);
-
-                    // Return null for the existing value...
-                    return null;
+                    return;
                 }
                 case INCOMPLETE_MATCH_TO_END_OF_EDGE: {
                     // Search found a difference in characters between the key and the start of all child edges leaving the
@@ -363,7 +361,11 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
 
                     // Create a new child node containing the trailing characters...
                     CharSequence keySuffix = key.subSequence(searchResult.charsMatched, key.length());
-                    TreeNode newChild = createNode(keySuffix, null, value, Collections.<TreeNode>emptyList(), false);
+
+                    List<Integer> newValues = new ArrayList<>();
+                    newValues.add(value);
+
+                    TreeNode newChild = createNode(keySuffix, null, newValues, Collections.<TreeNode>emptyList(), false);
 
                     // Clone the current node adding the new child...
                     List<TreeNode> edges = new ArrayList<TreeNode>(searchResult.nodeFound.getOutgoingEdges().size() + 1);
@@ -380,9 +382,8 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
                         searchResult.parentNode.updateOutgoingEdge(clonedNode);
                     }
                     newChild.setParent(clonedNode);
-
-                    // Return null for the existing value...
-                    return null;
+                    searchResult.nodeFound.getOutgoingEdges().forEach(it -> it.setParent(clonedNode));
+                    return;
                 }
                 case INCOMPLETE_MATCH_TO_MIDDLE_OF_EDGE: {
                     // Search found a difference in characters between the key and the characters in the middle of the
@@ -403,18 +404,17 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
                     CharSequence suffixFromKey = key.subSequence(searchResult.charsMatched, key.length());
 
                     // Create new nodes...
-                    TreeNode n1 = createNode(suffixFromKey, null, value, Collections.<TreeNode>emptyList(), false);
+                    List<Integer> newValues = new ArrayList<>();
+                    newValues.add(value);
+                    TreeNode n1 = createNode(suffixFromKey, null, newValues, Collections.<TreeNode>emptyList(), false);
                     TreeNode n2 = createNode(suffixFromExistingEdge, null, searchResult.nodeFound.getValue(), searchResult.nodeFound.getOutgoingEdges(), false);
-                    @SuppressWarnings({"NullableProblems"})
                     TreeNode n3 = createNode(commonPrefix, searchResult.parentNode, null, Arrays.asList(n1, n2), false);
 
                     searchResult.parentNode.updateOutgoingEdge(n3);
 
                     n1.setParent(n3);
                     n2.setParent(n3);
-
-                    // Return null for the existing value...
-                    return null;
+                    return;
                 }
                 default: {
                     // This is a safeguard against a new enum constant being added in future.
@@ -426,7 +426,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
         }
     }
 
-    private TreeNode createNode(CharSequence edgeCharacters, TreeNode parent, TIntHashSet value, List<TreeNode> childNodes, boolean isRoot) {
+    private TreeNode createNode(CharSequence edgeCharacters, TreeNode parent, List<Integer> value, List<TreeNode> childNodes, boolean isRoot) {
         if (edgeCharacters == null) {
             throw new IllegalStateException("The edgeCharacters argument was null");
         }
@@ -631,15 +631,15 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
 
         // An arbitrary value which the application associates with a key matching the path to this node in the tree.
         // This value can be null...
-        private final TIntHashSet value;
+        private final List<Integer> value;
 
-        TreeNode(CharSequence edgeCharSequence, TreeNode parent, TIntHashSet value) {
+        TreeNode(CharSequence edgeCharSequence, TreeNode parent, List<Integer> value) {
             this.incomingEdgeCharSequence = edgeCharSequence;
             this.parent = parent;
             this.value = value;
         }
 
-        TreeNode(CharSequence edgeCharSequence, TreeNode parent, TIntHashSet value, List<TreeNode> outgoingEdges) {
+        TreeNode(CharSequence edgeCharSequence, TreeNode parent, List<Integer> value, List<TreeNode> outgoingEdges) {
             TreeNode[] childNodeArray = outgoingEdges.toArray(new TreeNode[outgoingEdges.size()]);
             // Sort the child nodes...
             Arrays.sort(childNodeArray, new Comparator<TreeNode>() {
@@ -653,6 +653,10 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
             this.incomingEdgeCharSequence = edgeCharSequence;
             this.value = value;
             this.outgoingEdgesAsList = new AtomicReferenceArrayListAdapter<>(this.outgoingEdges);
+        }
+
+        boolean isRoot() {
+            return parent == null;
         }
 
         CharSequence getIncomingEdge() {
@@ -671,7 +675,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
             return incomingEdgeCharSequence.charAt(0);
         }
 
-        TIntHashSet getValue() {
+        List<Integer> getValue() {
             return value;
         }
 

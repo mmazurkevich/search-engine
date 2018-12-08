@@ -17,6 +17,8 @@ package org.search.engine.tree;
 
 import gnu.trove.set.hash.TIntHashSet;
 
+import java.util.List;
+
 /**
  * API of a radix tree, that is a tree which allows values to be looked up based on <i>prefixes</i> of the keys
  * with which they were associated, as well as based on exact matches for keys. A radix tree essentially allows
@@ -40,7 +42,7 @@ public interface SearchEngineTree<T> {
      * @param value The value to associate with the key, which cannot be null
      * @return The previous value associated with the key, if there was one, otherwise null
      */
-    TIntHashSet put(CharSequence key, TIntHashSet value);
+    void putMergeOnConflict(CharSequence key, int value);
 
     /**
      * Removes the value associated with the given key (exact match).
@@ -59,7 +61,7 @@ public interface SearchEngineTree<T> {
      * @param key The key with which a sought value might be associated
      * @return The value associated with the given key (exact match), or null if no value was associated with the key
      */
-    TIntHashSet getValueForExactKey(CharSequence key);
+    List<Integer> getValueForExactKey(CharSequence key);
 
     /**
      * Counts the number of keys/values stored in the tree.

@@ -73,7 +73,7 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
     public void onFileEvent(FilesystemEvent event, Path filePath) {
         final Path folderPath = filePath.getParent();
         final boolean isTrackedFile = trackedFiles.contains(filePath);
-        final boolean isTrackedFolder = trackedFiles.contains(folderPath);
+        final boolean isTrackedFolder = trackedFolders.contains(folderPath);
         if (isTrackedFile || isTrackedFolder) {
             //Find folder which we should not track any more and remove it
             if (isTrackedFile && !isTrackedFolder && event == DELETED) {

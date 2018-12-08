@@ -12,7 +12,9 @@ import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
@@ -64,7 +66,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
                 break;
             case DELETED:
                 try {
-                    for (Document document: indexedDocuments) {
+                    for (Document document : indexedDocuments) {
                         if (Files.isSameFile(folderPath, document.getParent())) {
                             removeFileFromIndex(document.getPath());
                         }
@@ -114,8 +116,8 @@ public class DocumentIndexManager implements FilesystemEventListener {
 
     private void indexFile(Path filePath, boolean shouldTrack) {
         try {
-            if (hasAccess(filePath)) {
-                Document document = new Document(uniqueDocumentId.incrementAndGet(), filePath);
+            if (hasAccess(filePath) && !isFileIndexed(filePath)) {
+                Document document = new Document(uniqueDocumentId.incrementAndGet(), shouldTrack, filePath);
                 DocumentIndexTask task = new DocumentIndexTask(document, index, indexedDocuments, notificationManager,
                         tokenizer, shouldTrack);
                 indexingExecutorService.execute(task);
@@ -127,14 +129,44 @@ public class DocumentIndexManager implements FilesystemEventListener {
         }
     }
 
-    public void removeFileFromIndex(Path filePath) {
-//        Path filePath = Paths.get(path);
-//        indexFile(filePath);
+    private void removeFileFromIndex(Path filePath) {
+        Document removableDocument = null;
+        for (Document document : indexedDocuments) {
+            if (filePath.equals(document.getPath())) {
+                removableDocument = document;
+            }
+        }
+        if (removableDocument != null) {
+            DocumentRemoveTask task = new DocumentRemoveTask(removableDocument, index, indexedDocuments);
+            indexingExecutorService.execute(task);
+        }
     }
 
-    public void reindexFile(Path filePath) {
-//        Path filePath = Paths.get(path);
-//        indexFile(filePath);
+    private void reindexFile(Path filePath) {
+        try {
+            Document removableDocument = null;
+            for (Document document : indexedDocuments) {
+                if (filePath.equals(document.getPath())) {
+                    removableDocument = document;
+                }
+            }
+            if (removableDocument != null) {
+                DocumentRemoveTask task = new DocumentRemoveTask(removableDocument, index, indexedDocuments);
+                indexingExecutorService.submit(task).get();
+                indexFile(filePath, removableDocument.isTracked());
+            }
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private boolean isFileIndexed(Path filePath) throws IOException {
+        for (Document document : indexedDocuments) {
+            if (Files.isSameFile(filePath, document.getPath())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean hasAccess(Path path) throws IOException {
