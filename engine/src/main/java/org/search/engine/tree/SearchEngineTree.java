@@ -61,7 +61,7 @@ public interface SearchEngineTree<T> {
      * @param key The key with which a sought value might be associated
      * @return The value associated with the given key (exact match), or null if no value was associated with the key
      */
-    List<Integer> getValueForExactKey(CharSequence key);
+    TIntHashSet getValueForExactKey(CharSequence key);
 
     /**
      * Counts the number of keys/values stored in the tree.

@@ -144,18 +144,22 @@ public class DocumentIndexManager implements FilesystemEventListener {
 
     private void reindexFile(Path filePath) {
         try {
-            Document removableDocument = null;
-            for (Document document : indexedDocuments) {
-                if (filePath.equals(document.getPath())) {
-                    removableDocument = document;
+            if (hasAccess(filePath)) {
+                Document removableDocument = null;
+                for (Document document : indexedDocuments) {
+                    if (Files.isSameFile(filePath, document.getPath())) {
+                        removableDocument = document;
+                    }
                 }
+                if (removableDocument != null) {
+                    DocumentRemoveTask task = new DocumentRemoveTask(removableDocument, index, indexedDocuments);
+                    indexingExecutorService.submit(task).get();
+                    indexFile(filePath, removableDocument.isTracked());
+                }
+            } else {
+                LOG.warning("Doesn't have access to the file");
             }
-            if (removableDocument != null) {
-                DocumentRemoveTask task = new DocumentRemoveTask(removableDocument, index, indexedDocuments);
-                indexingExecutorService.submit(task).get();
-                indexFile(filePath, removableDocument.isTracked());
-            }
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (IOException | InterruptedException | ExecutionException e) {
             e.printStackTrace();
         }
     }

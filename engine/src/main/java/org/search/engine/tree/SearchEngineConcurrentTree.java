@@ -46,14 +46,134 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
 
     @Override
     public void putMergeOnConflict(CharSequence key, int value) {
-        put(key, value);
+        if (key == null) {
+            throw new IllegalArgumentException("The key argument was null");
+        }
+        if (key.length() == 0) {
+            throw new IllegalArgumentException("The key argument was zero-length");
+        }
+
+        TIntHashSet newValues = new TIntHashSet();
+        newValues.add(value);
+
+        acquireWriteLock();
+        try {
+            // Note we search the tree here after we have acquired the write lock...
+            SearchResult searchResult = searchTree(key);
+            Classification classification = searchResult.classification;
+
+            TreeNode parentNode = searchResult.nodeFound.parent;
+            switch (classification) {
+                case EXACT_MATCH: {
+                    // Search found an exact match for all edges leading to this node.
+                    // -> Add or update the value in the node found, by replacing
+                    // the existing node with a new node containing the value...
+
+                    // First check if existing node has a value, and if we are allowed to overwrite it.
+                    // Return early without overwriting if necessary...
+                    TIntHashSet existingValue = searchResult.nodeFound.getValue();
+                    if (existingValue != null) {
+                        existingValue.add(value);
+                    }
+                    break;
+                }
+                case KEY_ENDS_MID_EDGE: {
+                    // Search ran out of characters from the key while in the middle of an edge in the node.
+                    // -> Split the node in two: Create a new parent node storing the new value,
+                    // and a new child node holding the original value and edges from the existing node...
+                    CharSequence keyCharsFromStartOfNodeFound = key.subSequence(searchResult.charsMatched - searchResult.charsMatchedInNodeFound, key.length());
+                    CharSequence commonPrefix = CharSequencesUtil.getCommonPrefix(keyCharsFromStartOfNodeFound, searchResult.nodeFound.getIncomingEdge());
+                    CharSequence suffixFromExistingEdge = CharSequencesUtil.subtractPrefix(searchResult.nodeFound.getIncomingEdge(), commonPrefix);
+
+                    // Create new nodes...
+                    TreeNode newChild = createNode(suffixFromExistingEdge, null, searchResult.nodeFound.getValue(), searchResult.nodeFound.getOutgoingEdges(), false);
+
+                    TreeNode newParent = createNode(commonPrefix, parentNode, newValues, Collections.singletonList(newChild), false);
+                    //Update parent for newly created child
+                    newChild.setParent(newParent);
+
+                    // Add the new parent to the parent of the node being replaced (replacing the existing node)...
+                    parentNode.updateOutgoingEdge(newParent);
+                    break;
+                }
+                case INCOMPLETE_MATCH_TO_END_OF_EDGE: {
+                    // Search found a difference in characters between the key and the start of all child edges leaving the
+                    // node, the key still has trailing unmatched characters.
+                    // -> Add a new child to the node, containing the trailing characters from the key.
+
+                    // NOTE: this is the only branch which allows an edge to be added to the root.
+                    // (Root node's own edge is "" empty string, so is considered a prefixing edge of every key)
+
+                    // Create a new child node containing the trailing characters...
+                    boolean isRoot = searchResult.nodeFound == root;
+
+                    CharSequence keySuffix = key.subSequence(searchResult.charsMatched, key.length());
+
+                    TreeNode newChild = createNode(keySuffix, null, newValues, Collections.emptyList(), false);
+
+                    // Clone the current node adding the new child...
+                    List<TreeNode> edges = new ArrayList<>(searchResult.nodeFound.getOutgoingEdges().size() + 1);
+                    edges.addAll(searchResult.nodeFound.getOutgoingEdges());
+                    edges.add(newChild);
+
+                    // Re-add the cloned node to its parent node...
+                    TreeNode clonedNode;
+                    if (isRoot) {
+                        clonedNode = createNode(searchResult.nodeFound.getIncomingEdge(), null, searchResult.nodeFound.getValue(), edges, isRoot);
+                        this.root = clonedNode;
+                    } else {
+                        clonedNode = createNode(searchResult.nodeFound.getIncomingEdge(), parentNode, searchResult.nodeFound.getValue(), edges, isRoot);
+                        parentNode.updateOutgoingEdge(clonedNode);
+                    }
+                    edges.forEach(it -> it.setParent(clonedNode));
+//                    newChild.setParent(clonedNode);
+//                    searchResult.nodeFound.getOutgoingEdges().forEach();
+                    break;
+                }
+                case INCOMPLETE_MATCH_TO_MIDDLE_OF_EDGE: {
+                    // Search found a difference in characters between the key and the characters in the middle of the
+                    // edge in the current node, and the key still has trailing unmatched characters.
+                    // -> Split the node in three:
+                    // Let's call node found: NF
+                    // (1) Create a new node N1 containing the unmatched characters from the rest of the key, and the
+                    // value supplied to this method
+                    // (2) Create a new node N2 containing the unmatched characters from the rest of the edge in NF, and
+                    // copy the original edges and the value from NF unmodified into N2
+                    // (3) Create a new node N3, which will be the split node, containing the matched characters from
+                    // the key and the edge, and add N1 and N2 as child nodes of N3
+                    // (4) Re-add N3 to the parent node of NF, effectively replacing NF in the tree
+
+                    CharSequence keyCharsFromStartOfNodeFound = key.subSequence(searchResult.charsMatched - searchResult.charsMatchedInNodeFound, key.length());
+                    CharSequence commonPrefix = CharSequencesUtil.getCommonPrefix(keyCharsFromStartOfNodeFound, searchResult.nodeFound.getIncomingEdge());
+                    CharSequence suffixFromExistingEdge = CharSequencesUtil.subtractPrefix(searchResult.nodeFound.getIncomingEdge(), commonPrefix);
+                    CharSequence suffixFromKey = key.subSequence(searchResult.charsMatched, key.length());
+
+                    // Create new nodes...
+                    TreeNode n1 = createNode(suffixFromKey, null, newValues, Collections.emptyList(), false);
+                    TreeNode n2 = createNode(suffixFromExistingEdge, null, searchResult.nodeFound.getValue(), searchResult.nodeFound.getOutgoingEdges(), false);
+                    TreeNode n3 = createNode(commonPrefix, parentNode, null, Arrays.asList(n1, n2), false);
+
+                    parentNode.updateOutgoingEdge(n3);
+
+                    n1.setParent(n3);
+                    n2.setParent(n3);
+                    break;
+                }
+                default: {
+                    // This is a safeguard against a new enum constant being added in future.
+                    throw new IllegalStateException("Unexpected classification for search result: " + searchResult);
+                }
+            }
+        } finally {
+            releaseWriteLock();
+        }
     }
 
     /**
      * {@inheritDoc}
      */
     @Override
-    public List<Integer> getValueForExactKey(CharSequence key) {
+    public TIntHashSet getValueForExactKey(CharSequence key) {
         SearchResult searchResult = searchTree(key);
         if (searchResult.classification.equals(Classification.EXACT_MATCH)) {
             return searchResult.nodeFound.getValue();
@@ -61,42 +181,50 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
         return null;
     }
 
-    //Convert list to set check and back
     public boolean removeByValue(Integer value) {
         if (value == null) {
             throw new IllegalArgumentException("The key argument was null");
         }
         acquireWriteLock();
-        List<TreeNode> suitableNodes = new ArrayList<>();
-        //Breadth-first traversing
-        Queue<TreeNode> nodesQueue = new LinkedList<>();
-        nodesQueue.add(root);
-        TreeNode currentNode;
+
         try {
-            while ((currentNode = nodesQueue.poll()) != null) {
-                List<TreeNode> childNodes = currentNode.getOutgoingEdges();
-                if (childNodes != null && !childNodes.isEmpty()) {
-                    nodesQueue.addAll(childNodes);
-                }
-                List<Integer> nodeValue = currentNode.getValue();
-                if (nodeValue != null && nodeValue.contains(value)) {
-                    suitableNodes.add(currentNode);
-                }
-            }
-            suitableNodes.forEach(it -> {
-                List<Integer> nodeValue = it.getValue();
-                System.out.println(prettyPrint());
-                if (nodeValue.size() > 1) {
-                    nodeValue.remove(value);
-                } else {
-                    remove(it);
-                }
-            });
+            System.out.println(prettyPrint());
+
+            boolean nodeWasRemoved;
+            do {
+                nodeWasRemoved = removeFirstApplicableNode(value);
+            } while (nodeWasRemoved);
+
             System.out.println(prettyPrint());
         } finally {
             releaseWriteLock();
         }
 
+        return false;
+    }
+
+    private boolean removeFirstApplicableNode(Integer value) {
+        Queue<TreeNode> nodesQueue = new LinkedList<>();
+        nodesQueue.add(root);
+        TreeNode currentNode;
+        //Breadth-first traversing
+        while ((currentNode = nodesQueue.poll()) != null) {
+            List<TreeNode> childNodes = currentNode.getOutgoingEdges();
+            if (childNodes != null && !childNodes.isEmpty()) {
+                nodesQueue.addAll(childNodes);
+            }
+
+            TIntHashSet nodeValue = currentNode.getValue();
+            if (nodeValue != null && nodeValue.contains(value)) {
+                TIntHashSet nodeValues = currentNode.getValue();
+                if (nodeValues.size() > 1) {
+                    nodeValues.remove(value);
+                } else {
+                    remove(currentNode);
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -155,6 +283,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
                 // Merge the parent with its only remaining child...
                 CharSequence concatenatedEdges = CharSequencesUtil.concatenate(node.parent.getIncomingEdge(), parentsRemainingChild.getIncomingEdge());
                 newParent = createNode(concatenatedEdges, null, parentsRemainingChild.getValue(), parentsRemainingChild.getOutgoingEdges(), parentIsRoot);
+                parentsRemainingChild.getOutgoingEdges().forEach(it -> it.setParent(newParent));
             } else {
                 // Parent is a node which either has a value of its own, has more than one remaining
                 // child, or is actually the root node (we never merge the root node).
@@ -165,7 +294,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
             // Re-add the parent node to its parent...
             if (parentIsRoot) {
                 // Replace the root node...
-                this.root = newParent;
+                this.root.setOutgoingEdge(newParent.outgoingEdgesAsList);
             } else {
                 // Re-add the parent node to its parent...
                 newParent.setParent(node.parent.parent);
@@ -194,7 +323,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
                         // No need to remove it...
                         return false;
                     }
-
+                    TreeNode parentNode = searchResult.nodeFound.parent;
                     // Proceed with deleting the node...
                     List<TreeNode> childEdges = searchResult.nodeFound.getOutgoingEdges();
                     if (childEdges.size() > 1) {
@@ -202,19 +331,18 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
                         // to leave a similar node in place to act as the split between the child edges.
                         // Just delete the value associated with this node.
                         // -> Clone this node without its value, preserving its child nodes...
-                        @SuppressWarnings({"NullableProblems"})
-                        TreeNode cloned = createNode(searchResult.nodeFound.getIncomingEdge(), searchResult.parentNode, null, searchResult.nodeFound.getOutgoingEdges(), false);
+                        TreeNode cloned = createNode(searchResult.nodeFound.getIncomingEdge(), parentNode, null, searchResult.nodeFound.getOutgoingEdges(), false);
                         // Re-add the replacement node to the parent...
-                        searchResult.parentNode.updateOutgoingEdge(cloned);
+                        parentNode.updateOutgoingEdge(cloned);
                     } else if (childEdges.size() == 1) {
                         // Node has one child edge.
                         // Create a new node which is the concatenation of the edges from this node and its child,
                         // and which has the outgoing edges of the child and the value from the child.
                         TreeNode child = childEdges.get(0);
                         CharSequence concatenatedEdges = CharSequencesUtil.concatenate(searchResult.nodeFound.getIncomingEdge(), child.getIncomingEdge());
-                        TreeNode mergedNode = createNode(concatenatedEdges, searchResult.parentNode, child.getValue(), child.getOutgoingEdges(), false);
+                        TreeNode mergedNode = createNode(concatenatedEdges, parentNode, child.getValue(), child.getOutgoingEdges(), false);
                         // Re-add the merged node to the parent...
-                        searchResult.parentNode.updateOutgoingEdge(mergedNode);
+                        parentNode.updateOutgoingEdge(mergedNode);
                     } else {
                         // Node has no children. Delete this node from its parent,
                         // which involves re-creating the parent rather than simply updating its child edge
@@ -224,11 +352,11 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
                         // (a special case which we never merge), then we also need to merge the parent with its
                         // remaining child.
 
-                        List<TreeNode> currentEdgesFromParent = searchResult.parentNode.getOutgoingEdges();
+                        List<TreeNode> currentEdgesFromParent = parentNode.getOutgoingEdges();
                         // Create a list of the outgoing edges of the parent which will remain
                         // if we remove this child...
                         // Use a non-resizable list, as a sanity check to force ArrayIndexOutOfBounds...
-                        List<TreeNode> newEdgesOfParent = Arrays.asList(new TreeNode[searchResult.parentNode.getOutgoingEdges().size() - 1]);
+                        List<TreeNode> newEdgesOfParent = Arrays.asList(new TreeNode[parentNode.getOutgoingEdges().size() - 1]);
                         for (int i = 0, added = 0, numParentEdges = currentEdgesFromParent.size(); i < numParentEdges; i++) {
                             TreeNode node = currentEdgesFromParent.get(i);
                             if (node != searchResult.nodeFound) {
@@ -237,20 +365,20 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
                         }
 
                         // Note the parent might actually be the root node (which we should never merge)...
-                        boolean parentIsRoot = (searchResult.parentNode == root);
+                        boolean parentIsRoot = (parentNode == root);
                         TreeNode newParent;
-                        if (newEdgesOfParent.size() == 1 && searchResult.parentNode.getValue() == null && !parentIsRoot) {
+                        if (newEdgesOfParent.size() == 1 && parentNode.getValue() == null && !parentIsRoot) {
                             // Parent is a non-root split node with only one remaining child, which can now be merged.
                             TreeNode parentsRemainingChild = newEdgesOfParent.get(0);
                             // Merge the parent with its only remaining child...
-                            CharSequence concatenatedEdges = CharSequencesUtil.concatenate(searchResult.parentNode.getIncomingEdge(), parentsRemainingChild.getIncomingEdge());
+                            CharSequence concatenatedEdges = CharSequencesUtil.concatenate(parentNode.getIncomingEdge(), parentsRemainingChild.getIncomingEdge());
                             newParent = createNode(concatenatedEdges, null, parentsRemainingChild.getValue(), parentsRemainingChild.getOutgoingEdges(), parentIsRoot);
                         } else {
                             // Parent is a node which either has a value of its own, has more than one remaining
                             // child, or is actually the root node (we never merge the root node).
                             // Create new parent node which is the same as is currently just without the edge to the
                             // node being deleted...
-                            newParent = createNode(searchResult.parentNode.getIncomingEdge(), null, searchResult.parentNode.getValue(), newEdgesOfParent, parentIsRoot);
+                            newParent = createNode(parentNode.getIncomingEdge(), null, parentNode.getValue(), newEdgesOfParent, parentIsRoot);
                         }
                         // Re-add the parent node to its parent...
                         if (parentIsRoot) {
@@ -258,8 +386,8 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
                             this.root = newParent;
                         } else {
                             // Re-add the parent node to its parent...
-                            newParent.setParent(searchResult.parentNodesParent);
-                            searchResult.parentNodesParent.updateOutgoingEdge(newParent);
+                            newParent.setParent(parentNode.parent);
+                            parentNode.parent.updateOutgoingEdge(newParent);
                         }
                     }
                     return true;
@@ -292,141 +420,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
 
     // ------------- Helper method for put() -------------
 
-    /**
-     * Atomically adds the given value to the tree, creating a node for the value as necessary. If the value is already
-     * stored for the same key, either overwrites the existing value, or simply returns the existing value, depending
-     * on the given value of the <code>overwrite</code> flag.
-     *
-     * @param key   The key against which the value should be stored
-     * @param value The value to store against the key
-     * @return The existing value for this key, if there was one, otherwise null
-     */
-    private void put(CharSequence key, int value) {
-        if (key == null) {
-            throw new IllegalArgumentException("The key argument was null");
-        }
-        if (key.length() == 0) {
-            throw new IllegalArgumentException("The key argument was zero-length");
-        }
-
-        acquireWriteLock();
-        try {
-            // Note we search the tree here after we have acquired the write lock...
-            SearchResult searchResult = searchTree(key);
-            Classification classification = searchResult.classification;
-
-            switch (classification) {
-                case EXACT_MATCH: {
-                    // Search found an exact match for all edges leading to this node.
-                    // -> Add or update the value in the node found, by replacing
-                    // the existing node with a new node containing the value...
-
-                    // First check if existing node has a value, and if we are allowed to overwrite it.
-                    // Return early without overwriting if necessary...
-                    List<Integer> existingValue = searchResult.nodeFound.getValue();
-                    if (existingValue != null) {
-                        existingValue.add(value);
-                    }
-                    return;
-                }
-                case KEY_ENDS_MID_EDGE: {
-                    // Search ran out of characters from the key while in the middle of an edge in the node.
-                    // -> Split the node in two: Create a new parent node storing the new value,
-                    // and a new child node holding the original value and edges from the existing node...
-                    CharSequence keyCharsFromStartOfNodeFound = key.subSequence(searchResult.charsMatched - searchResult.charsMatchedInNodeFound, key.length());
-                    CharSequence commonPrefix = CharSequencesUtil.getCommonPrefix(keyCharsFromStartOfNodeFound, searchResult.nodeFound.getIncomingEdge());
-                    CharSequence suffixFromExistingEdge = CharSequencesUtil.subtractPrefix(searchResult.nodeFound.getIncomingEdge(), commonPrefix);
-
-                    // Create new nodes...
-                    TreeNode newChild = createNode(suffixFromExistingEdge, null, searchResult.nodeFound.getValue(), searchResult.nodeFound.getOutgoingEdges(), false);
-
-                    List<Integer> newValues = new ArrayList<>();
-                    newValues.add(value);
-
-                    TreeNode newParent = createNode(commonPrefix, searchResult.parentNode, newValues, Arrays.asList(newChild), false);
-                    //Update parent for newly created child
-                    newChild.setParent(newParent);
-
-                    // Add the new parent to the parent of the node being replaced (replacing the existing node)...
-                    searchResult.parentNode.updateOutgoingEdge(newParent);
-                    return;
-                }
-                case INCOMPLETE_MATCH_TO_END_OF_EDGE: {
-                    // Search found a difference in characters between the key and the start of all child edges leaving the
-                    // node, the key still has trailing unmatched characters.
-                    // -> Add a new child to the node, containing the trailing characters from the key.
-
-                    // NOTE: this is the only branch which allows an edge to be added to the root.
-                    // (Root node's own edge is "" empty string, so is considered a prefixing edge of every key)
-
-                    // Create a new child node containing the trailing characters...
-                    CharSequence keySuffix = key.subSequence(searchResult.charsMatched, key.length());
-
-                    List<Integer> newValues = new ArrayList<>();
-                    newValues.add(value);
-
-                    TreeNode newChild = createNode(keySuffix, null, newValues, Collections.<TreeNode>emptyList(), false);
-
-                    // Clone the current node adding the new child...
-                    List<TreeNode> edges = new ArrayList<TreeNode>(searchResult.nodeFound.getOutgoingEdges().size() + 1);
-                    edges.addAll(searchResult.nodeFound.getOutgoingEdges());
-                    edges.add(newChild);
-
-                    // Re-add the cloned node to its parent node...
-                    TreeNode clonedNode;
-                    if (searchResult.nodeFound == root) {
-                        clonedNode = createNode(searchResult.nodeFound.getIncomingEdge(), null, searchResult.nodeFound.getValue(), edges, searchResult.nodeFound == root);
-                        this.root = clonedNode;
-                    } else {
-                        clonedNode = createNode(searchResult.nodeFound.getIncomingEdge(), searchResult.parentNode, searchResult.nodeFound.getValue(), edges, searchResult.nodeFound == root);
-                        searchResult.parentNode.updateOutgoingEdge(clonedNode);
-                    }
-                    newChild.setParent(clonedNode);
-                    searchResult.nodeFound.getOutgoingEdges().forEach(it -> it.setParent(clonedNode));
-                    return;
-                }
-                case INCOMPLETE_MATCH_TO_MIDDLE_OF_EDGE: {
-                    // Search found a difference in characters between the key and the characters in the middle of the
-                    // edge in the current node, and the key still has trailing unmatched characters.
-                    // -> Split the node in three:
-                    // Let's call node found: NF
-                    // (1) Create a new node N1 containing the unmatched characters from the rest of the key, and the
-                    // value supplied to this method
-                    // (2) Create a new node N2 containing the unmatched characters from the rest of the edge in NF, and
-                    // copy the original edges and the value from NF unmodified into N2
-                    // (3) Create a new node N3, which will be the split node, containing the matched characters from
-                    // the key and the edge, and add N1 and N2 as child nodes of N3
-                    // (4) Re-add N3 to the parent node of NF, effectively replacing NF in the tree
-
-                    CharSequence keyCharsFromStartOfNodeFound = key.subSequence(searchResult.charsMatched - searchResult.charsMatchedInNodeFound, key.length());
-                    CharSequence commonPrefix = CharSequencesUtil.getCommonPrefix(keyCharsFromStartOfNodeFound, searchResult.nodeFound.getIncomingEdge());
-                    CharSequence suffixFromExistingEdge = CharSequencesUtil.subtractPrefix(searchResult.nodeFound.getIncomingEdge(), commonPrefix);
-                    CharSequence suffixFromKey = key.subSequence(searchResult.charsMatched, key.length());
-
-                    // Create new nodes...
-                    List<Integer> newValues = new ArrayList<>();
-                    newValues.add(value);
-                    TreeNode n1 = createNode(suffixFromKey, null, newValues, Collections.<TreeNode>emptyList(), false);
-                    TreeNode n2 = createNode(suffixFromExistingEdge, null, searchResult.nodeFound.getValue(), searchResult.nodeFound.getOutgoingEdges(), false);
-                    TreeNode n3 = createNode(commonPrefix, searchResult.parentNode, null, Arrays.asList(n1, n2), false);
-
-                    searchResult.parentNode.updateOutgoingEdge(n3);
-
-                    n1.setParent(n3);
-                    n2.setParent(n3);
-                    return;
-                }
-                default: {
-                    // This is a safeguard against a new enum constant being added in future.
-                    throw new IllegalStateException("Unexpected classification for search result: " + searchResult);
-                }
-            }
-        } finally {
-            releaseWriteLock();
-        }
-    }
-
-    private TreeNode createNode(CharSequence edgeCharacters, TreeNode parent, List<Integer> value, List<TreeNode> childNodes, boolean isRoot) {
+    private TreeNode createNode(CharSequence edgeCharacters, TreeNode parent, TIntHashSet value, List<TreeNode> childNodes, boolean isRoot) {
         if (edgeCharacters == null) {
             throw new IllegalStateException("The edgeCharacters argument was null");
         }
@@ -507,8 +501,6 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
      * matched node, and a {@link SearchResult#classification} of the match as described above
      */
     SearchResult searchTree(CharSequence key) {
-        TreeNode parentNodesParent = null;
-        TreeNode parentNode = null;
         TreeNode currentNode = root;
         int charsMatched = 0, charsMatchedInNodeFound = 0;
 
@@ -522,8 +514,6 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
                 break outer_loop;
             }
 
-            parentNodesParent = parentNode;
-            parentNode = currentNode;
             currentNode = nextNode;
             charsMatchedInNodeFound = 0;
             CharSequence currentNodeEdgeCharacters = currentNode.getIncomingEdge();
@@ -537,7 +527,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
                 charsMatchedInNodeFound++;
             }
         }
-        return new SearchResult(key, currentNode, charsMatched, charsMatchedInNodeFound, parentNode, parentNodesParent);
+        return new SearchResult(key, currentNode, charsMatched, charsMatchedInNodeFound);
     }
 
     /**
@@ -561,18 +551,14 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
         final TreeNode nodeFound;
         final int charsMatched;
         final int charsMatchedInNodeFound;
-        final TreeNode parentNode;
-        final TreeNode parentNodesParent;
         final Classification classification;
 
 
-        SearchResult(CharSequence key, TreeNode nodeFound, int charsMatched, int charsMatchedInNodeFound, TreeNode parentNode, TreeNode parentNodesParent) {
+        SearchResult(CharSequence key, TreeNode nodeFound, int charsMatched, int charsMatchedInNodeFound) {
             this.key = key;
             this.nodeFound = nodeFound;
             this.charsMatched = charsMatched;
             this.charsMatchedInNodeFound = charsMatchedInNodeFound;
-            this.parentNode = parentNode;
-            this.parentNodesParent = parentNodesParent;
 
             // Classify this search result...
             this.classification = classify(key, nodeFound, charsMatched, charsMatchedInNodeFound);
@@ -602,8 +588,6 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
                     ", nodeFound=" + nodeFound +
                     ", charsMatched=" + charsMatched +
                     ", charsMatchedInNodeFound=" + charsMatchedInNodeFound +
-                    ", parentNode=" + parentNode +
-                    ", parentNodesParent=" + parentNodesParent +
                     ", classification=" + classification +
                     '}';
         }
@@ -631,28 +615,19 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
 
         // An arbitrary value which the application associates with a key matching the path to this node in the tree.
         // This value can be null...
-        private final List<Integer> value;
+        private final TIntHashSet value;
 
-        TreeNode(CharSequence edgeCharSequence, TreeNode parent, List<Integer> value) {
+        TreeNode(CharSequence edgeCharSequence, TreeNode parent, TIntHashSet value) {
             this.incomingEdgeCharSequence = edgeCharSequence;
             this.parent = parent;
             this.value = value;
         }
 
-        TreeNode(CharSequence edgeCharSequence, TreeNode parent, List<Integer> value, List<TreeNode> outgoingEdges) {
-            TreeNode[] childNodeArray = outgoingEdges.toArray(new TreeNode[outgoingEdges.size()]);
-            // Sort the child nodes...
-            Arrays.sort(childNodeArray, new Comparator<TreeNode>() {
-                @Override
-                public int compare(TreeNode o1, TreeNode o2) {
-                    return o1.getIncomingEdgeFirstCharacter().compareTo(o2.getIncomingEdgeFirstCharacter());
-                }
-            });
+        TreeNode(CharSequence edgeCharSequence, TreeNode parent, TIntHashSet value, List<TreeNode> outgoingEdges) {
             this.parent = parent;
-            this.outgoingEdges = new AtomicReferenceArray<>(childNodeArray);
             this.incomingEdgeCharSequence = edgeCharSequence;
             this.value = value;
-            this.outgoingEdgesAsList = new AtomicReferenceArrayListAdapter<>(this.outgoingEdges);
+            setOutgoingEdge(outgoingEdges);
         }
 
         boolean isRoot() {
@@ -675,7 +650,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
             return incomingEdgeCharSequence.charAt(0);
         }
 
-        List<Integer> getValue() {
+        TIntHashSet getValue() {
             return value;
         }
 
@@ -695,18 +670,29 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
             return outgoingEdges.get(index);
         }
 
-        void updateOutgoingEdge(TreeNode childNode) {
-            IllegalStateException stateException = new IllegalStateException("Cannot update the reference to the following child node for the edge starting with '" + childNode.getIncomingEdgeFirstCharacter() + "', no such edge already exists: " + childNode);
+        void setOutgoingEdge(List<TreeNode> outgoingEdges) {
+            TreeNode[] childNodeArray = outgoingEdges.toArray(new TreeNode[outgoingEdges.size()]);
+            // Sort the child nodes...
+            Arrays.sort(childNodeArray, new Comparator<TreeNode>() {
+                @Override
+                public int compare(TreeNode o1, TreeNode o2) {
+                    return o1.getIncomingEdgeFirstCharacter().compareTo(o2.getIncomingEdgeFirstCharacter());
+                }
+            });
+            this.outgoingEdges = new AtomicReferenceArray<>(childNodeArray);
+            this.outgoingEdgesAsList = new AtomicReferenceArrayListAdapter<>(this.outgoingEdges);
+        }
 
+        void updateOutgoingEdge(TreeNode childNode) {
             if (outgoingEdges == null) {
-                throw stateException;
+                throw new IllegalStateException("Cannot update the reference to the following child node for the edge starting with '" + childNode.getIncomingEdgeFirstCharacter() + "', no such edge already exists: " + childNode);
             }
             // Binary search for the index of the node whose edge starts with the given character.
             // Note that this binary search is safe in the face of concurrent modification due to constraints
             // we enforce on use of the array, as documented in the binarySearchForEdge method...
             int index = binarySearchForEdge(outgoingEdges, childNode.getIncomingEdgeFirstCharacter());
             if (index < 0) {
-                throw stateException;
+                throw new IllegalStateException("Cannot update the reference to the following child node for the edge starting with '" + childNode.getIncomingEdgeFirstCharacter() + "', no such edge already exists: " + childNode);
             }
             // Atomically update the child node at this index...
             outgoingEdges.set(index, childNode);
