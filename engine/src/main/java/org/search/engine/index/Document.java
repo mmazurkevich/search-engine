@@ -2,21 +2,21 @@ package org.search.engine.index;
 
 import java.nio.file.Path;
 
-class Document {
+public class Document {
 
     private int id;
     private boolean tracked;
     private Path path;
     private Path parent;
 
-    Document(int id, boolean tracked, Path path) {
+    public Document(int id, boolean tracked, Path path) {
         this.id = id;
         this.tracked = tracked;
         this.path = path;
         this.parent = path.getParent();
     }
 
-    int getId() {
+    public int getId() {
         return id;
     }
 
@@ -24,11 +24,11 @@ class Document {
         return tracked;
     }
 
-    Path getPath() {
+    public Path getPath() {
         return path;
     }
 
-    Path getParent() {
+    public Path getParent() {
         return parent;
     }
 }

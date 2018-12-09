@@ -18,6 +18,7 @@ package org.search.engine.tree;
 import gnu.trove.set.hash.TIntHashSet;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * API of a radix tree, that is a tree which allows values to be looked up based on <i>prefixes</i> of the keys
@@ -44,15 +45,16 @@ public interface SearchEngineTree<T> {
      */
     void putMergeOnConflict(CharSequence key, int value);
 
+    void removeByKey(CharSequence key);
     /**
      * Removes the value associated with the given key (exact match).
      * If no value is associated with the key, does nothing.
      *
-     * @param key The key for which an associated value should be removed
+     * @param value The key for which an associated value should be removed
      * @return True if a value was removed (and therefore was associated with the key), false if no value was
      * associated/removed
      */
-    boolean remove(CharSequence key);
+    void removeByValue(int value);
 
     /**
      * Returns the value associated with the given key (exact match), or returns null if no such value
@@ -61,7 +63,9 @@ public interface SearchEngineTree<T> {
      * @param key The key with which a sought value might be associated
      * @return The value associated with the given key (exact match), or null if no value was associated with the key
      */
-    TIntHashSet getValueForExactKey(CharSequence key);
+    List<Integer> getValue(CharSequence key);
+
+    Set<String> getKeys(int value);
 
     /**
      * Counts the number of keys/values stored in the tree.

@@ -29,12 +29,12 @@ public class DocumentIndexManager implements FilesystemEventListener {
     private final Tokenizer tokenizer;
     private final AtomicInteger uniqueDocumentId;
 
-    public DocumentIndexManager(SearchEngineConcurrentTree index, FilesystemNotificationManager notificationManager,
+    public DocumentIndexManager(SearchEngineConcurrentTree index, List<Document> indexedDocuments, FilesystemNotificationManager notificationManager,
                                 Tokenizer tokenizer) {
         this.index = index;
         this.notificationManager = notificationManager;
         this.tokenizer = tokenizer;
-        indexedDocuments = new ArrayList<>();
+        this.indexedDocuments = indexedDocuments;
         uniqueDocumentId = new AtomicInteger();
         indexingExecutorService = SearchEngineExecutors.getDocumentIndexingExecutor();
         notificationManager.addListener(this);
@@ -145,21 +145,20 @@ public class DocumentIndexManager implements FilesystemEventListener {
     private void reindexFile(Path filePath) {
         try {
             if (hasAccess(filePath)) {
-                Document removableDocument = null;
+                Document updatingDocument = null;
                 for (Document document : indexedDocuments) {
                     if (Files.isSameFile(filePath, document.getPath())) {
-                        removableDocument = document;
+                        updatingDocument = document;
                     }
                 }
-                if (removableDocument != null) {
-                    DocumentRemoveTask task = new DocumentRemoveTask(removableDocument, index, indexedDocuments);
-                    indexingExecutorService.submit(task).get();
-                    indexFile(filePath, removableDocument.isTracked());
+                if (updatingDocument != null) {
+                    DocumentUpdateTask task = new DocumentUpdateTask(updatingDocument, index, tokenizer);
+                    indexingExecutorService.submit(task);
                 }
             } else {
                 LOG.warning("Doesn't have access to the file");
             }
-        } catch (IOException | InterruptedException | ExecutionException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
