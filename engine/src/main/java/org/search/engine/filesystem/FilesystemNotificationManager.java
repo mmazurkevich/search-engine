@@ -80,8 +80,11 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         final boolean isTrackedFolder = trackedFolders.contains(folderPath);
         if (isTrackedFile || isTrackedFolder) {
             //Find folder which we should not track any more and remove it
-            if (isTrackedFile && !isTrackedFolder && event == DELETED) {
-                unregisterFolder(folderPath);
+            if (isTrackedFile && event == DELETED) {
+                unregisterFile(filePath);
+                if (!isTrackedFolder) {
+                    unregisterFolder(folderPath);
+                }
             }
             listeners.forEach(it -> it.onFileChanged(event, filePath));
         }
@@ -120,6 +123,10 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         }
     }
 
+    private void unregisterFile(Path filePath) {
+        trackedFiles.remove(filePath);
+    }
+
     private void unregisterFolder(Path folderPath) {
         WatchKey key = null;
         for (Map.Entry<WatchKey, Path> entry : registeredFolders.entrySet()) {
@@ -129,6 +136,7 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         }
         if (key != null) {
             registeredFolders.remove(key);
+            trackedFolders.remove(folderPath);
             key.cancel();
             LOG.debug("Unregistered folder: " + folderPath);
         }

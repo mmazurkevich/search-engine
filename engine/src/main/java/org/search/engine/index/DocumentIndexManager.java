@@ -116,7 +116,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
             if (hasAccess(filePath) && !isFileIndexed(filePath)) {
                 Document document = new Document(uniqueDocumentId.incrementAndGet(), shouldTrack, filePath);
                 DocumentIndexTask task = new DocumentIndexTask(document, index, indexedDocuments, notificationManager,
-                        tokenizer, shouldTrack);
+                        tokenizer);
                 indexingExecutorService.execute(task);
             } else {
                 LOG.warn("Doesn't have access to the file: {}", filePath.toAbsolutePath());

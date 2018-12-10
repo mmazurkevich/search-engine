@@ -1,5 +1,6 @@
 package org.search.engine.index;
 
+import com.sun.istack.internal.NotNull;
 import org.search.engine.analyzer.Tokenizer;
 import org.search.engine.filesystem.FilesystemNotificationManager;
 import org.search.engine.tree.SearchEngineTree;
@@ -20,16 +21,14 @@ public class DocumentIndexTask implements Runnable {
     private final SearchEngineTree index;
     private final Document indexingDocument;
     private final Tokenizer tokenizer;
-    private final boolean shouldTrack;
 
     DocumentIndexTask(Document indexingDocument, SearchEngineTree index, List<Document> indexedDocuments,
-                      FilesystemNotificationManager notificationManager, Tokenizer tokenizer, boolean shouldTrack) {
+                      FilesystemNotificationManager notificationManager, Tokenizer tokenizer) {
         this.index = index;
         this.indexedDocuments = indexedDocuments;
         this.indexingDocument = indexingDocument;
         this.notificationManager = notificationManager;
         this.tokenizer = tokenizer;
-        this.shouldTrack = shouldTrack;
     }
 
     @Override
@@ -43,7 +42,7 @@ public class DocumentIndexTask implements Runnable {
 
             long end = System.currentTimeMillis();
             LOG.debug("Indexation of file: {} took {}ms", indexingDocument.getPath(), (end - start));
-            if (shouldTrack) {
+            if (indexingDocument.isTracked()) {
                 notificationManager.registerFile(indexingDocument.getPath());
             }
             indexedDocuments.add(indexingDocument);

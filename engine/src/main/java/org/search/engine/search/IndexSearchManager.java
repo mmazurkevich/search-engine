@@ -24,9 +24,9 @@ public class IndexSearchManager {
     public List<String> searchByQuery(String searchQuery) {
         if (searchQuery != null && !searchQuery.isEmpty()) {
             LOG.debug("Searching documents by query: {}", searchQuery);
-            System.out.println(index);
             List<Integer> value = index.getValue(searchQuery);
             if (!value.isEmpty()) {
+                LOG.debug("Founded documents count: {}", value.size());
                 return indexedDocuments.stream().filter(document -> value.contains(document.getId()))
                         .map(document -> document.getPath().toAbsolutePath().toString())
                         .collect(Collectors.toList());

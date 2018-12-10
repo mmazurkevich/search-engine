@@ -13,6 +13,5 @@ repositories {
 
 dependencies {
     compile project(':engine')
-    // https://mvnrepository.com/artifact/ch.qos.logback/logback-classic
     compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
 }
