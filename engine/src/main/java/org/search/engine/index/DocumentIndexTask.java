@@ -2,7 +2,7 @@ package org.search.engine.index;
 
 import org.search.engine.analyzer.Tokenizer;
 import org.search.engine.filesystem.FilesystemNotificationManager;
-import org.search.engine.tree.SearchEngineConcurrentTree;
+import org.search.engine.tree.SearchEngineTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,12 +17,12 @@ public class DocumentIndexTask implements Runnable {
 
     private final FilesystemNotificationManager notificationManager;
     private final List<Document> indexedDocuments;
-    private final SearchEngineConcurrentTree index;
+    private final SearchEngineTree index;
     private final Document indexingDocument;
     private final Tokenizer tokenizer;
     private final boolean shouldTrack;
 
-    DocumentIndexTask(Document indexingDocument, SearchEngineConcurrentTree index, List<Document> indexedDocuments,
+    DocumentIndexTask(Document indexingDocument, SearchEngineTree index, List<Document> indexedDocuments,
                       FilesystemNotificationManager notificationManager, Tokenizer tokenizer, boolean shouldTrack) {
         this.index = index;
         this.indexedDocuments = indexedDocuments;
@@ -34,7 +34,6 @@ public class DocumentIndexTask implements Runnable {
 
     @Override
     public void run() {
-        //Index needed document and check in exception should it be rolled back
         try (Stream<String> lines = Files.lines(indexingDocument.getPath())) {
             long start = System.currentTimeMillis();
 
@@ -48,8 +47,8 @@ public class DocumentIndexTask implements Runnable {
                 notificationManager.registerFile(indexingDocument.getPath());
             }
             indexedDocuments.add(indexingDocument);
-        } catch (IOException e) {
-            LOG.warn("Indexation of file: {} finished with exception", indexingDocument.getPath());
+        } catch (IOException ex) {
+            LOG.warn("Indexation of file: {} finished with exception", indexingDocument.getPath(), ex);
         }
     }
 }

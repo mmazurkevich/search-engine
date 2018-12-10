@@ -1,7 +1,6 @@
 package org.search.engine.tree;
 
 import gnu.trove.set.hash.TIntHashSet;
-import gnu.trove.set.hash.TLongHashSet;
 import org.search.engine.tree.util.*;
 
 import java.io.IOException;

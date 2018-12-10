@@ -64,8 +64,8 @@ public class FilesystemNotificationScheduler implements Runnable {
                     }
                 }
             }
-        } catch (InterruptedException e) {
-            LOG.warn("Scheduler interrupted while retrieves watch keys");
+        } catch (InterruptedException ex) {
+            LOG.warn("Scheduler interrupted while retrieves watch keys", ex);
         }
     }
 

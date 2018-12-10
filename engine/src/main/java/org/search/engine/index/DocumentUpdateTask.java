@@ -1,7 +1,7 @@
 package org.search.engine.index;
 
 import org.search.engine.analyzer.Tokenizer;
-import org.search.engine.tree.SearchEngineConcurrentTree;
+import org.search.engine.tree.SearchEngineTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,11 +14,11 @@ public class DocumentUpdateTask implements Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(DocumentUpdateTask.class);
 
-    private final SearchEngineConcurrentTree index;
+    private final SearchEngineTree index;
     private final Document updatingDocument;
     private final Tokenizer tokenizer;
 
-    DocumentUpdateTask(Document updatingDocument, SearchEngineConcurrentTree index, Tokenizer tokenizer) {
+    DocumentUpdateTask(Document updatingDocument, SearchEngineTree index, Tokenizer tokenizer) {
         this.index = index;
         this.updatingDocument = updatingDocument;
         this.tokenizer = tokenizer;
@@ -44,7 +44,7 @@ public class DocumentUpdateTask implements Runnable {
             oldDocumentTokens.forEach(index::removeByKey);
             long end = System.currentTimeMillis();
             LOG.debug("Update index for file: {} took {}ms", updatingDocument.getPath(), (end - start));
-        } catch (IOException e) {
+        } catch (IOException ex) {
             LOG.warn("Update index for file: {} finished with exception", updatingDocument.getPath());
         }
     }

@@ -5,11 +5,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -31,9 +35,9 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
 
     public FilesystemNotificationManager(WatchService watchService) {
         this.watchService = watchService;
-        registeredFolders = new HashMap<>();
-        trackedFiles = new ArrayList<>();
-        trackedFolders = new ArrayList<>();
+        registeredFolders = new ConcurrentHashMap<>();
+        trackedFiles = new CopyOnWriteArrayList<>();
+        trackedFolders = new CopyOnWriteArrayList<>();
         listeners = new ArrayList<>();
     }
 
@@ -63,9 +67,8 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
                         onFileEvent(DELETED, file);
                     }
                 }
-            } catch (IOException e) {
-                LOG.warn("Unhandled DELETE event for folder: {}", folderPath.toAbsolutePath().toString());
-                e.printStackTrace();
+            } catch (IOException ex) {
+                LOG.warn("Unhandled DELETE event for folder: {}", folderPath.toAbsolutePath(), ex);
             }
         }
     }
@@ -88,6 +91,7 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         if (filePath != null) {
             scheduleNotificationIfNeeded();
             trackedFiles.add(filePath);
+            LOG.debug("File {} registered", filePath.toAbsolutePath());
             Path folderPath = filePath.getParent();
             registerFolder(folderPath, false);
         }
@@ -105,14 +109,14 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
                 scheduleNotificationIfNeeded();
                 WatchKey key = folderPath.register(watchService, ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE);
                 registeredFolders.put(key, folderPath);
-                LOG.info("Folder {} registered", folderPath.toAbsolutePath().toString());
+                LOG.debug("Folder {} registered", folderPath.toAbsolutePath());
             } else {
-                LOG.info("Folder already registered");
+                LOG.debug("Folder already registered");
             }
             if (!trackedFolders.contains(folderPath) && shouldTrack)
                 trackedFolders.add(folderPath);
-        } catch (IOException e) {
-            LOG.warn("Exception during registration folder in notification manager");
+        } catch (IOException ex) {
+            LOG.warn("Exception during folder registration in notification manager", ex);
         }
     }
 
@@ -126,7 +130,7 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         if (key != null) {
             registeredFolders.remove(key);
             key.cancel();
-            LOG.info("Unregistered folder: " + folderPath);
+            LOG.debug("Unregistered folder: " + folderPath);
         }
     }
 

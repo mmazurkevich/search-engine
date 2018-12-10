@@ -1,7 +1,9 @@
 package org.search.engine.search;
 
 import org.search.engine.index.Document;
-import org.search.engine.tree.SearchEngineConcurrentTree;
+import org.search.engine.tree.SearchEngineTree;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
@@ -9,16 +11,19 @@ import java.util.stream.Collectors;
 
 public class IndexSearchManager {
 
-    private final SearchEngineConcurrentTree index;
+    private static final Logger LOG = LoggerFactory.getLogger(IndexSearchManager.class);
+
+    private final SearchEngineTree index;
     private final List<Document> indexedDocuments;
 
-    public IndexSearchManager(SearchEngineConcurrentTree index, List<Document> indexedDocuments) {
+    public IndexSearchManager(SearchEngineTree index, List<Document> indexedDocuments) {
         this.index = index;
         this.indexedDocuments = indexedDocuments;
     }
 
     public List<String> searchByQuery(String searchQuery) {
         if (searchQuery != null && !searchQuery.isEmpty()) {
+            LOG.debug("Searching documents by query: {}", searchQuery);
             System.out.println(index);
             List<Integer> value = index.getValue(searchQuery);
             if (!value.isEmpty()) {
