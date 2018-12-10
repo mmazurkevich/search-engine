@@ -14,11 +14,8 @@ import java.nio.file.FileSystems;
 import java.nio.file.WatchService;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
 
 public class SearchEngine {
-
-    private static final Logger LOG = Logger.getLogger(SearchEngine.class.getName());
 
     private final SearchEngineConcurrentTree index;
     private final List<Document> indexedDocuments;

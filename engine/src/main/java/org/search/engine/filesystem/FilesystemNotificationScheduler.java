@@ -1,10 +1,12 @@
 package org.search.engine.filesystem;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Logger;
 
 import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
 import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
@@ -15,7 +17,7 @@ import static org.search.engine.filesystem.FilesystemEvent.MODIFIED;
 
 public class FilesystemNotificationScheduler implements Runnable {
 
-    private static final Logger LOG = Logger.getLogger(FilesystemNotificationScheduler.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(FilesystemNotificationScheduler.class);
 
     private final WatchService watchService;
     private final Map<WatchKey, Path> registeredFolders;
@@ -63,7 +65,7 @@ public class FilesystemNotificationScheduler implements Runnable {
                 }
             }
         } catch (InterruptedException e) {
-            LOG.warning("Scheduler interrupted while retrieves watch keys");
+            LOG.warn("Scheduler interrupted while retrieves watch keys");
         }
     }
 

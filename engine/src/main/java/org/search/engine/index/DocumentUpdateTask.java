@@ -1,19 +1,18 @@
 package org.search.engine.index;
 
 import org.search.engine.analyzer.Tokenizer;
-import org.search.engine.filesystem.FilesystemNotificationManager;
 import org.search.engine.tree.SearchEngineConcurrentTree;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.List;
 import java.util.Set;
-import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 public class DocumentUpdateTask implements Runnable {
 
-    private static final Logger LOG = Logger.getLogger(DocumentUpdateTask.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(DocumentUpdateTask.class);
 
     private final SearchEngineConcurrentTree index;
     private final Document updatingDocument;
@@ -32,6 +31,7 @@ public class DocumentUpdateTask implements Runnable {
 
         //Old tokens which should be removed from index
         Set<String> oldDocumentTokens = index.getKeys(documentId);
+
         try (Stream<String> lines = Files.lines(updatingDocument.getPath())) {
             lines.forEach(line -> tokenizer.tokenize(line).forEach(token -> {
                 if (oldDocumentTokens.contains(token)) {
@@ -43,9 +43,9 @@ public class DocumentUpdateTask implements Runnable {
             }));
             oldDocumentTokens.forEach(index::removeByKey);
             long end = System.currentTimeMillis();
-            LOG.info("Update index for file: " + updatingDocument.getPath() + " took " + (end - start) + "ms");
+            LOG.debug("Update index for file: {} took {}ms", updatingDocument.getPath(), (end - start));
         } catch (IOException e) {
-            LOG.warning("Update index for file: " + updatingDocument.getPath() + " finished with exception");
+            LOG.warn("Update index for file: {} finished with exception", updatingDocument.getPath());
         }
     }
 }

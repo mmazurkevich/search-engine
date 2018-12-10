@@ -236,16 +236,11 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
     @Override
     public void removeByValue(int value) {
         acquireWriteLock();
-
         try {
-            System.out.println(toString());
-
             boolean nodeWasRemoved;
             do {
                 nodeWasRemoved = removeFirstApplicableNode(value);
             } while (nodeWasRemoved);
-
-            System.out.println(toString());
         } finally {
             releaseWriteLock();
         }
@@ -274,8 +269,6 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
         prettyPrint(root, sb, "", true, true);
         return sb.toString();
     }
-
-    // ------------- Helper method for put() -------------
 
     private TreeNode createNode(CharSequence edgeCharacters, TreeNode parent, TIntHashSet value, List<TreeNode> childNodes, boolean isRoot) {
         if (edgeCharacters == null) {
@@ -731,7 +724,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
      */
     private void ensureNoDuplicateEdges(List<TreeNode> nodes) {
         // Sanity check that no two nodes specify an edge with the same first character...
-        Set<Character> uniqueChars = new HashSet<Character>(nodes.size());
+        Set<Character> uniqueChars = new HashSet<>(nodes.size());
         for (TreeNode node : nodes) {
             uniqueChars.add(node.getIncomingEdgeFirstCharacter());
         }

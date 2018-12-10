@@ -6,21 +6,19 @@ import org.search.engine.filesystem.FilesystemEvent;
 import org.search.engine.filesystem.FilesystemEventListener;
 import org.search.engine.filesystem.FilesystemNotificationManager;
 import org.search.engine.tree.SearchEngineConcurrentTree;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.logging.Logger;
 
 public class DocumentIndexManager implements FilesystemEventListener {
 
-    private static final Logger LOG = Logger.getLogger(DocumentIndexManager.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(DocumentIndexManager.class);
 
     private final FilesystemNotificationManager notificationManager;
     private final List<Document> indexedDocuments;
@@ -42,7 +40,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
 
     @Override
     public void onFileChanged(FilesystemEvent event, Path filePath) {
-        System.out.println("Handling event:" + event + " for file: " + filePath);
+        LOG.debug("Handling event: {}  for file: {}", event, filePath);
         switch (event) {
             case CREATED:
                 indexFile(filePath, false);
@@ -59,7 +57,8 @@ public class DocumentIndexManager implements FilesystemEventListener {
     @Override
     public void onFolderChanged(FilesystemEvent event, Path folderPath) {
         //Doesn't handle folder MODIFIED event
-        System.out.println("Handling event:" + event + " for folder: " + folderPath);
+        LOG.debug("Handling event: {}  for folder: {}", event, folderPath);
+        System.out.println();
         switch (event) {
             case CREATED:
                 indexFolder(folderPath);
@@ -72,7 +71,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
                         }
                     }
                 } catch (IOException e) {
-                    LOG.warning("Unhandled DELETE event for folder: " + folderPath.toAbsolutePath().toString());
+                    LOG.warn("Unhandled DELETE event for folder: {}", folderPath.toAbsolutePath());
                     e.printStackTrace();
                 }
                 break;
@@ -107,7 +106,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
                     }
                 });
             } else {
-                LOG.warning("Doesn't have access to the folder");
+                LOG.warn("Doesn't have access to the folder: {}", folderPath.toAbsolutePath());
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -122,7 +121,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
                         tokenizer, shouldTrack);
                 indexingExecutorService.execute(task);
             } else {
-                LOG.warning("Doesn't have access to the file");
+                LOG.warn("Doesn't have access to the file: {}", filePath.toAbsolutePath());
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -156,7 +155,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
                     indexingExecutorService.submit(task);
                 }
             } else {
-                LOG.warning("Doesn't have access to the file");
+                LOG.warn("Doesn't have access to the file: {}", filePath.toAbsolutePath());
             }
         } catch (IOException e) {
             e.printStackTrace();
