@@ -1,22 +1,6 @@
-/**
- * Copyright 2012-2013 Niall Gallagher
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.search.engine.tree.examples.shakespeare;
 
 
-import org.search.engine.tree.util.PrettyPrinter;
 import org.search.engine.tree.examples.shakespeare.util.IOUtil;
 import org.search.engine.tree.SearchEngineConcurrentTree;
 
@@ -76,35 +60,35 @@ public class BuildShakespeareWordRadixTree {
     );
 
     public static void main(String[] args) {
-        SearchEngineConcurrentTree<WordValue> tree = new SearchEngineConcurrentTree<WordValue>();
-        for (String file : files) {
-            Set<String> wordsInFile = IOUtil.loadWordsFromTextFileOnClasspath(file, true); // true = convert to lowercase
-            for (String word : wordsInFile) {
-                WordValue wordValue = tree.getValueForExactKey(word);
-                if (wordValue == null) {
-                    wordValue = new WordValue(word);
-                    tree.put(word, wordValue); // not using concurrency support here
-                }
-                wordValue.manuscriptsContainingWord.add(file.replaceAll("/.*/.*/", "").replace(".txt", ""));
-            }
-        }
-
-        final String radixTreePrinted = PrettyPrinter.prettyPrint(tree);
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                JTextArea textArea = new JTextArea();
-                textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 14));
-                textArea.setText(radixTreePrinted);
-                JScrollPane scrollPane = new JScrollPane(textArea);
-                textArea.setEditable(false);
-                JFrame frame = new JFrame("Shakespeare Radix Tree");
-                frame.add(scrollPane);
-                frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-                frame.setSize(640, 480);
-                frame.setVisible(true);
-            }
-        });
+//        SearchEngineConcurrentTree<WordValue> tree = new SearchEngineConcurrentTree<WordValue>();
+//        for (String file : files) {
+//            Set<String> wordsInFile = IOUtil.loadWordsFromTextFileOnClasspath(file, true); // true = convert to lowercase
+//            for (String word : wordsInFile) {
+//                WordValue wordValue = tree.getValueForExactKey(word);
+//                if (wordValue == null) {
+//                    wordValue = new WordValue(word);
+//                    tree.put(word, wordValue); // not using concurrency support here
+//                }
+//                wordValue.manuscriptsContainingWord.add(file.replaceAll("/.*/.*/", "").replace(".txt", ""));
+//            }
+//        }
+//
+//        final String radixTreePrinted = PrettyPrinter.prettyPrint(tree);
+//        SwingUtilities.invokeLater(new Runnable() {
+//            @Override
+//            public void run() {
+//                JTextArea textArea = new JTextArea();
+//                textArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 14));
+//                textArea.setText(radixTreePrinted);
+//                JScrollPane scrollPane = new JScrollPane(textArea);
+//                textArea.setEditable(false);
+//                JFrame frame = new JFrame("Shakespeare Radix Tree");
+//                frame.add(scrollPane);
+//                frame.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+//                frame.setSize(640, 480);
+//                frame.setVisible(true);
+//            }
+//        });
 
     }
 
