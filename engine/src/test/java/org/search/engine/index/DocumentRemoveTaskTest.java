@@ -17,21 +17,26 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.verify;
+import static org.mockito.internal.verification.VerificationModeFactory.times;
 
 public class DocumentRemoveTaskTest extends AbstractDocumentTaskTest {
 
     private DocumentRemoveTask removeTask;
+    @Mock
+    private FilesystemNotificationManager notificationManager;
 
     @Before
     public void setUp() throws URISyntaxException {
+        MockitoAnnotations.initMocks(this);
         URL resource = DocumentIndexTaskTest.class.getResource(fileTitle);
         filePath = Paths.get(resource.toURI());
-        Document removableDocument = new Document(documentId, false, filePath);
+        Document removableDocument = new Document(documentId, true, filePath);
         indexedDocuments = new ArrayList<>();
         index = new SearchEngineConcurrentTree();
-        DocumentIndexTask indexTask = new DocumentIndexTask(removableDocument, index, indexedDocuments, null, new StandardTokenizer());
+        DocumentIndexTask indexTask = new DocumentIndexTask(removableDocument, index, indexedDocuments, notificationManager, new StandardTokenizer());
         indexTask.run();
-        removeTask = new DocumentRemoveTask(removableDocument, index, indexedDocuments);
+        removeTask = new DocumentRemoveTask(removableDocument, index, indexedDocuments, notificationManager);
     }
 
     @Test
@@ -43,6 +48,8 @@ public class DocumentRemoveTaskTest extends AbstractDocumentTaskTest {
         assertEquals(1, searchResult.size());
 
         removeTask.run();
+        verify(notificationManager, times(1)).registerFile(filePath);
+
         assertEquals(0, index.size());
         assertEquals(0, indexedDocuments.size());
 

@@ -1,5 +1,6 @@
 package org.search.engine.index;
 
+import org.search.engine.filesystem.FilesystemNotificationManager;
 import org.search.engine.tree.SearchEngineTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,11 +14,14 @@ public class DocumentRemoveTask implements Runnable {
     private final List<Document> indexedDocuments;
     private final SearchEngineTree index;
     private final Document removableDocument;
+    private final FilesystemNotificationManager notificationManager;
 
-    DocumentRemoveTask(Document removableDocument, SearchEngineTree index, List<Document> indexedDocuments) {
+    DocumentRemoveTask(Document removableDocument, SearchEngineTree index, List<Document> indexedDocuments,
+                       FilesystemNotificationManager notificationManager) {
         this.index = index;
         this.indexedDocuments = indexedDocuments;
         this.removableDocument = removableDocument;
+        this.notificationManager = notificationManager;
     }
 
     @Override
@@ -25,6 +29,9 @@ public class DocumentRemoveTask implements Runnable {
         long start = System.currentTimeMillis();
         index.removeByValue(removableDocument.getId());
         indexedDocuments.remove(removableDocument);
+        if (removableDocument.isTracked()) {
+            notificationManager.unregisterFile(removableDocument.getPath());
+        }
         long end = System.currentTimeMillis();
         LOG.debug("Removing file: {}  from index took {}ms", removableDocument.getPath(), (end - start));
     }

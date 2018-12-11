@@ -1,6 +1,5 @@
 package org.search.engine.index;
 
-import com.sun.istack.internal.NotNull;
 import org.search.engine.analyzer.Tokenizer;
 import org.search.engine.filesystem.FilesystemNotificationManager;
 import org.search.engine.tree.SearchEngineTree;

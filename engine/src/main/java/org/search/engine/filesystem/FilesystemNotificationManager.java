@@ -81,7 +81,6 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         if (isTrackedFile || isTrackedFolder) {
             //Find folder which we should not track any more and remove it
             if (isTrackedFile && event == DELETED) {
-                unregisterFile(filePath);
                 if (!isTrackedFolder) {
                     unregisterFolder(folderPath);
                 }
@@ -90,13 +89,19 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         }
     }
 
+    public void unregisterFile(Path filePath) {
+        trackedFiles.remove(filePath);
+    }
+
     public void registerFile(Path filePath) {
-        if (filePath != null) {
+        if (filePath != null && !trackedFiles.contains(filePath)) {
             scheduleNotificationIfNeeded();
             trackedFiles.add(filePath);
             LOG.debug("File {} registered", filePath.toAbsolutePath());
             Path folderPath = filePath.getParent();
             registerFolder(folderPath, false);
+        } else {
+            LOG.debug("File already registered");
         }
     }
 
@@ -121,10 +126,6 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         } catch (IOException ex) {
             LOG.warn("Exception during folder registration in notification manager", ex);
         }
-    }
-
-    private void unregisterFile(Path filePath) {
-        trackedFiles.remove(filePath);
     }
 
     private void unregisterFolder(Path folderPath) {

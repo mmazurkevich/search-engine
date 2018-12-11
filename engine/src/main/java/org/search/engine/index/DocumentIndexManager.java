@@ -134,7 +134,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
             }
         }
         if (removableDocument != null) {
-            DocumentRemoveTask task = new DocumentRemoveTask(removableDocument, index, indexedDocuments);
+            DocumentRemoveTask task = new DocumentRemoveTask(removableDocument, index, indexedDocuments, notificationManager);
             indexingExecutorService.execute(task);
         }
     }
