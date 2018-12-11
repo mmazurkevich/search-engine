@@ -81,7 +81,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
         indexFolder(folderPath);
     }
 
-    public void indexFile(String path) {
+    public void  indexFile(String path) {
         Path filePath = Paths.get(path).normalize();
         indexFile(filePath, true);
     }

@@ -3,16 +3,13 @@ package org.search.engine.index;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.search.engine.analyzer.StandardTokenizer;
 import org.search.engine.filesystem.FilesystemNotificationManager;
 import org.search.engine.tree.SearchEngineConcurrentTree;
-import org.search.engine.tree.SearchEngineTree;
 
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,7 +18,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
-public class DocumentIndexTaskTest extends AbstractDocumentTaskTest {
+public class DocumentIndexTaskTest extends AbstractDocumentIndexationTest {
 
     private DocumentIndexTask task;
     private Document indexingDocument;
@@ -42,7 +39,7 @@ public class DocumentIndexTaskTest extends AbstractDocumentTaskTest {
 
     @Test
     public void testDocumentIndexation() {
-        String searchQuery = "surfeits";
+
         assertTrue(indexedDocuments.isEmpty());
 
         task.run();

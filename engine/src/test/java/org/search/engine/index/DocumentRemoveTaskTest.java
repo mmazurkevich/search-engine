@@ -7,11 +7,9 @@ import org.mockito.MockitoAnnotations;
 import org.search.engine.analyzer.StandardTokenizer;
 import org.search.engine.filesystem.FilesystemNotificationManager;
 import org.search.engine.tree.SearchEngineConcurrentTree;
-import org.search.engine.tree.SearchEngineTree;
 
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +18,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.verify;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
-public class DocumentRemoveTaskTest extends AbstractDocumentTaskTest {
+public class DocumentRemoveTaskTest extends AbstractDocumentIndexationTest {
 
     private DocumentRemoveTask removeTask;
     @Mock
@@ -43,7 +41,6 @@ public class DocumentRemoveTaskTest extends AbstractDocumentTaskTest {
     public void testDocumentRemoveFromIndex() {
         assertEquals(7, index.size());
 
-        String searchQuery = "surfeits";
         List<Integer> searchResult = index.getValue(searchQuery);
         assertEquals(1, searchResult.size());
 

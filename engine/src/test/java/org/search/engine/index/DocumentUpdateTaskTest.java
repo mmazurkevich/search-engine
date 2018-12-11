@@ -20,7 +20,7 @@ import java.util.List;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-public class DocumentUpdateTaskTest extends AbstractDocumentTaskTest {
+public class DocumentUpdateTaskTest extends AbstractDocumentIndexationTest {
 
     private DocumentUpdateTask updateTask;
     private Path filePath;
