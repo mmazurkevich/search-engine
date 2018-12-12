@@ -3,8 +3,6 @@ package org.search.engine.tree;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
@@ -91,7 +89,8 @@ public class SearchEngineTreeTest {
         tree.putMergeOnConflict("FOO", 1);
         tree.putMergeOnConflict("FOO", 2);
 
-        assertEquals(Arrays.asList(2, 1), tree.getValue("FOO"));
+        assertTrue(tree.getValue("FOO").contains(1));
+        assertTrue(tree.getValue("FOO").contains(2));
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -114,13 +113,13 @@ public class SearchEngineTreeTest {
         tree.putMergeOnConflict("TOAST", 3);
         assertEquals(3, tree.size());
 
-        tree.removeByKey("FOO");
+        tree.removeByKeyAndValue("FOO", 1);
         assertEquals(3, tree.size());
-        tree.removeByKey("TOAST");
+        tree.removeByKeyAndValue("TOAST", 3);
         assertEquals(2, tree.size());
-        tree.removeByKey("TEAM");
+        tree.removeByKeyAndValue("TEAM", 2);
         assertEquals(1, tree.size());
-        tree.removeByKey("TEST");
+        tree.removeByKeyAndValue("TEST", 1);
         assertEquals(0, tree.size());
     }
 
@@ -130,9 +129,9 @@ public class SearchEngineTreeTest {
         tree.putMergeOnConflict("TEAM", 2);
         tree.putMergeOnConflict("TOAST", 3);
 
-        assertEquals(Collections.singletonList(1), tree.getValue("TEST"));
-        assertEquals(Collections.singletonList(2), tree.getValue("TEAM"));
-        assertEquals(Collections.singletonList(3), tree.getValue("TOAST"));
+        assertTrue(tree.getValue("TEST").contains(1));
+        assertTrue(tree.getValue("TEAM").contains(2));
+        assertTrue(tree.getValue("TOAST").contains(3));
         assertTrue(tree.getValue("T").isEmpty());
         assertTrue(tree.getValue("TE").isEmpty());
         assertTrue(tree.getValue("E").isEmpty());
@@ -151,7 +150,7 @@ public class SearchEngineTreeTest {
                 "    └── ○ D {3}\n";
         assertEquals(expected, tree.toString());
 
-        tree.removeByKey("FOO"); // value removed, but node stay
+        tree.removeByKeyAndValue("FOO", 1); // value removed, but node stay
         expected = "○\n" +
                 "└── ○ FOO\n" +
                 "    ├── ○ BAR {2}\n" +
@@ -171,7 +170,7 @@ public class SearchEngineTreeTest {
                 "        └── ○ BAZ {3}\n";
         assertEquals(expected, tree.toString());
 
-        tree.removeByKey("FOO"); //FOO and BAR merged and the value copied
+        tree.removeByKeyAndValue("FOO", 1); //FOO and BAR merged and the value copied
 
         expected = "○\n" +
                 "└── ○ FOOBAR {2}\n" +
@@ -189,7 +188,7 @@ public class SearchEngineTreeTest {
                 "└── ○ FOO {1}\n";
         assertEquals(expected, tree.toString());
 
-        tree.removeByKey("FOO");
+        tree.removeByKeyAndValue("FOO", 1);
         expected = "○\n" +
                 "└── ○ BAR {2}\n";
         assertEquals(expected, tree.toString());
@@ -204,7 +203,7 @@ public class SearchEngineTreeTest {
                 "└── ○ FOO {1}\n";
         assertEquals(expected, tree.toString());
 
-        tree.removeByKey("FOO");
+        tree.removeByKeyAndValue("FOO", 1);
 
         expected = "○\n";
         assertEquals(expected, tree.toString());
@@ -220,7 +219,7 @@ public class SearchEngineTreeTest {
                 "    └── ○ BAR {2}\n";
         assertEquals(expected, tree.toString());
 
-        tree.removeByKey("FOOBAR");
+        tree.removeByKeyAndValue("FOOBAR", 2);
 
         expected = "○\n" +
                 "└── ○ FOO {1}\n";
@@ -238,7 +237,7 @@ public class SearchEngineTreeTest {
                 "    └── ○ D {2}\n";
         assertEquals(expected, tree.toString());
 
-        tree.removeByKey("FOO");
+        tree.removeByKeyAndValue("FOO", 1);
         expected = "○\n" +
                 "└── ○ FOO\n" +
                 "    ├── ○ BAR {1}\n" +
@@ -250,20 +249,23 @@ public class SearchEngineTreeTest {
     public void testRemoveByKeyMergeSplittedNode() {
         tree.putMergeOnConflict("TEST", 1);
         tree.putMergeOnConflict("TEAM", 2);
+        tree.putMergeOnConflict("TEST", 2);
         tree.putMergeOnConflict("TOAST", 3);
 
         String expected = "○\n" +
                 "└── ○ T\n" +
                 "    ├── ○ E\n" +
                 "    │   ├── ○ AM {2}\n" +
-                "    │   └── ○ ST {1}\n" +
+                "    │   └── ○ ST {2,1}\n" +
                 "    └── ○ OAST {3}\n";
         assertEquals(expected, tree.toString());
 
-        tree.removeByKey("TEST");
+        tree.removeByKeyAndValue("TEST", 1);
         expected = "○\n" +
                 "└── ○ T\n" +
-                "    ├── ○ EAM {2}\n" +
+                "    ├── ○ E\n" +
+                "    │   ├── ○ AM {2}\n" +
+                "    │   └── ○ ST {2}\n" +
                 "    └── ○ OAST {3}\n";
         assertEquals(expected, tree.toString());
     }
@@ -283,7 +285,7 @@ public class SearchEngineTreeTest {
                 "    └── ○ OAST {3}\n";
         assertEquals(expected, tree.toString());
 
-        tree.removeByKey("TEST");
+        tree.removeByKeyAndValue("TEST", 1);
         expected = "○\n" +
                 "└── ○ T\n" +
                 "    ├── ○ E {4}\n" +
@@ -302,7 +304,7 @@ public class SearchEngineTreeTest {
                 "└── ○ FOO {1}\n";
         assertEquals(expected, tree.toString());
 
-        tree.removeByKey("BAZ");
+        tree.removeByKeyAndValue("BAZ", 2);
 
         expected = "○\n" +
                 "├── ○ BAR {2}\n" +
@@ -312,7 +314,7 @@ public class SearchEngineTreeTest {
 
     @Test(expected = IllegalArgumentException.class)
     public void testRemoveByKeyArgumentValidation() {
-        tree.removeByKey(null);
+        tree.removeByKeyAndValue(null, 1);
     }
 
     @Test

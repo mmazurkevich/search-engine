@@ -18,6 +18,14 @@ import java.nio.file.WatchService;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+/**
+ * The main class of the library for in-memory documents/folders indexation.
+ * It can be customized by using different implementations of tokenizer.
+ * You can user your oun implementation of it for splitting the your document's
+ * to the needed lexemes. Under the hood this lib use radix tree structure
+ * for storing lexemes and document identifiers. NOTE: Each instance of this class
+ * contains it's own index.
+ */
 public class SearchEngine {
 
     private final List<Document> indexedDocuments = new CopyOnWriteArrayList<>();
@@ -42,14 +50,30 @@ public class SearchEngine {
         }
     }
 
+    /**
+     * Method for indexing folder documents.
+     *
+     * @param path The path to the indexing folder
+     */
     public void indexFolder(String path) {
         indexManager.indexFolder(path);
     }
 
+    /**
+     * Method for indexing document.
+     *
+     * @param path The path to the indexing document
+     */
     public void indexFile(String path) {
         indexManager.indexFile(path);
     }
 
+    /**
+     * Method for searching certain query in the current index
+     *
+     * @param searchQuery The query which should be searched in the index
+     * @return The list of documents which contains the searched lexeme
+     */
     public List<String> search(String searchQuery) {
         return searchManager.searchByQuery(searchQuery);
     }

@@ -15,7 +15,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -52,7 +52,7 @@ public class DocumentUpdateTaskTest extends AbstractDocumentIndexationTest {
         assertEquals(6, index.size());
 
         String searchQuery = "another";
-        List<Integer> searchResult = index.getValue(searchQuery);
+        Set<Integer> searchResult = index.getValue(searchQuery);
         assertTrue(searchResult.isEmpty());
 
         Files.write(filePath, Collections.singletonList(" another thing"), StandardCharsets.UTF_8,

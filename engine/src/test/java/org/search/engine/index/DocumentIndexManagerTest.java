@@ -6,6 +6,7 @@ import org.junit.Test;
 import org.search.engine.analyzer.StandardTokenizer;
 import org.search.engine.filesystem.FilesystemEvent;
 import org.search.engine.filesystem.FilesystemNotificationManager;
+import org.search.engine.filesystem.FilesystemNotifier;
 import org.search.engine.tree.SearchEngineConcurrentTree;
 
 import java.io.IOException;
@@ -15,7 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -23,7 +24,7 @@ import static org.junit.Assert.assertTrue;
 public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
 
     private WatchService watchService;
-    private FilesystemNotificationManager notificationManager;
+    private FilesystemNotifier notificationManager;
     private DocumentIndexManager indexManager;
     private Path createdFile;
     private Path createdFolder;
@@ -55,9 +56,9 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
         Thread.sleep(2000);
 
         assertEquals(1, indexedDocuments.size());
-        List<Integer> searchResult = index.getValue(searchQuery);
+        Set<Integer> searchResult = index.getValue(searchQuery);
         assertEquals(1, searchResult.size());
-        assertEquals(documentId, searchResult.get(0).intValue());
+        assertTrue(searchResult.contains(documentId));
     }
 
     @Test
@@ -81,7 +82,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
         indexManager.indexFile(createdFile.toString());
         Thread.sleep(2000);
         assertEquals(1, indexedDocuments.size());
-        List<Integer> searchResult = index.getValue(searchQuery);
+        Set<Integer> searchResult = index.getValue(searchQuery);
         assertTrue(searchResult.isEmpty());
 
         Files.write(createdFile, Collections.singletonList(searchQuery), StandardCharsets.UTF_8, StandardOpenOption.APPEND);
@@ -115,7 +116,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
 
         assertEquals(2, indexedDocuments.size());
         String searchQuery = "mila";
-        List<Integer> searchResult = index.getValue(searchQuery);
+        Set<Integer> searchResult = index.getValue(searchQuery);
         assertEquals(2, searchResult.size());
         assertTrue(searchResult.contains(1));
         assertTrue(searchResult.contains(2));
@@ -138,7 +139,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
 
         assertEquals(3, indexedDocuments.size());
 
-        List<Integer> searchResult = index.getValue(searchQuery);
+        Set<Integer> searchResult = index.getValue(searchQuery);
         assertEquals(1, searchResult.size());
     }
 
@@ -154,7 +155,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
         indexManager.indexFolder(createdFolder.toString());
         Thread.sleep(2000);
         assertEquals(1, indexedDocuments.size());
-        List<Integer> searchResult = index.getValue(searchQuery);
+        Set<Integer> searchResult = index.getValue(searchQuery);
         assertEquals(1, searchResult.size());
 
         indexManager.onFolderChanged(FilesystemEvent.DELETED, createdFolder);

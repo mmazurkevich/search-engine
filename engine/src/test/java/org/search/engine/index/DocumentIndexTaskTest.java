@@ -5,14 +5,14 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.search.engine.analyzer.StandardTokenizer;
-import org.search.engine.filesystem.FilesystemNotificationManager;
+import org.search.engine.filesystem.FilesystemNotifier;
 import org.search.engine.tree.SearchEngineConcurrentTree;
 
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -25,7 +25,7 @@ public class DocumentIndexTaskTest extends AbstractDocumentIndexationTest {
     private Document indexingDocument;
 
     @Mock
-    private FilesystemNotificationManager notificationManager;
+    private FilesystemNotifier notificationManager;
 
     @Before
     public void setUp() throws URISyntaxException {
@@ -50,9 +50,9 @@ public class DocumentIndexTaskTest extends AbstractDocumentIndexationTest {
         assertEquals(1, indexedDocuments.size());
         assertTrue(indexedDocuments.contains(indexingDocument));
 
-        List<Integer> searchResult = index.getValue(searchQuery);
+        Set<Integer> searchResult = index.getValue(searchQuery);
         assertEquals(1, searchResult.size());
-        assertEquals(documentId, searchResult.get(0).intValue());
+        assertTrue(searchResult.contains(documentId));
     }
 
 }

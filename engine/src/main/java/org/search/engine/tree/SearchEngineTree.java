@@ -1,6 +1,5 @@
 package org.search.engine.tree;
 
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -45,12 +44,23 @@ public interface SearchEngineTree {
     /**
      * Method removes value from tree node and if value's list size is less equal one, remove node from tree.
      *
-     * @param key CharSequence of serched lexeme
-     * @param value Identifier of indexed entity which shouled be removed
+     * @param key CharSequence of searched lexeme
+     * @param value Identifier of indexed entity which should be removed
      */
     void removeByKeyAndValue(CharSequence key, int value);
 
+    /**
+     * Remove specific value from the all nodes in the tree. If tre contains list of size one,
+     * this node will be removed
+     *
+     * @param value Identifier of indexed entity which should be removed from all nodes
+     */
     void removeByValue(int value);
 
+    /**
+     * Return the size of all node in the tree which contains values
+     *
+     * @return number of nodes with value in the tree
+     */
     int size();
 }

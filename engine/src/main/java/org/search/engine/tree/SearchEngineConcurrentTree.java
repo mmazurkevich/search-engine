@@ -9,6 +9,15 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
+/**
+ * Implementation of concurrent radix tree which store char sequences in the nodes and
+ * the list of values with unique identifiers of the indexed entities. Tree contains the lock
+ * for all modification operations. So get operation are not blocked but others wait until lock
+ * will be retrieved. This tree use less memory for storing indexed words in the tree and by
+ * using int ids as identifiers. It's important because of it's an in memory index. We
+ * don't reduce performans by using tree and use less memory. This class can be improved
+ * by using partial locks for the each branch of tree.
+ */
 public class SearchEngineConcurrentTree implements SearchEngineTree {
 
     // Lock for modification operations
@@ -19,6 +28,9 @@ public class SearchEngineConcurrentTree implements SearchEngineTree {
         this.root = createNode("", null, null, Collections.emptyList(), true);
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void putMergeOnConflict(CharSequence key, int value) {
         if (key == null || key.length() == 0) {
@@ -107,6 +119,9 @@ public class SearchEngineConcurrentTree implements SearchEngineTree {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Set<Integer> getValue(CharSequence key) {
         if (key == null) {
@@ -123,6 +138,9 @@ public class SearchEngineConcurrentTree implements SearchEngineTree {
         return Collections.emptySet();
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public Set<String> getKeys(int value) {
         List<TreeNode> suitableNodes = new ArrayList<>();
@@ -156,6 +174,9 @@ public class SearchEngineConcurrentTree implements SearchEngineTree {
         return keys;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void removeByKeyAndValue(CharSequence key, int value) {
         if (key == null) {
@@ -177,6 +198,9 @@ public class SearchEngineConcurrentTree implements SearchEngineTree {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void removeByValue(int value) {
         writeLock.lock();
@@ -190,6 +214,9 @@ public class SearchEngineConcurrentTree implements SearchEngineTree {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int size() {
         Deque<TreeNode> stack = new LinkedList<>();
