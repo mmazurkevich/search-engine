@@ -50,7 +50,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest{
 
     @Test
     public void testIndexFile() throws URISyntaxException, InterruptedException {
-        URL resource = DocumentIndexTaskTest.class.getResource(fileTitle);
+        URL resource = DocumentIndexManagerTest.class.getResource(fileTitle);
         indexManager.indexFile(resource.toURI().getRawPath());
         Thread.sleep(2000);
 
@@ -62,7 +62,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest{
 
     @Test
     public void testIndexFileTwice() throws URISyntaxException, InterruptedException {
-        URL resource = DocumentIndexTaskTest.class.getResource(fileTitle);
+        URL resource = DocumentIndexManagerTest.class.getResource(fileTitle);
         indexManager.indexFile(resource.toURI().getRawPath());
         Thread.sleep(2000);
         assertEquals(1, indexedDocuments.size());
@@ -74,7 +74,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest{
     @Test
     public void testUpdateIndexedFile() throws InterruptedException, IOException, URISyntaxException {
         final String searchQuery = "singletonList";
-        URL resource = DocumentIndexTaskTest.class.getResource(folderTitle);
+        URL resource = DocumentIndexManagerTest.class.getResource(folderTitle);
         createdFile = Paths.get(resource.toURI().getRawPath() + "/tree.txt");
         Files.write(createdFile, Collections.singletonList("Text example"), StandardCharsets.UTF_8, StandardOpenOption.CREATE);
 
@@ -95,7 +95,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest{
 
     @Test
     public void testDeleteIndexedFile() throws URISyntaxException, InterruptedException {
-        URL resource = DocumentIndexTaskTest.class.getResource(fileTitle);
+        URL resource = DocumentIndexManagerTest.class.getResource(fileTitle);
         indexManager.indexFile(resource.toURI().getRawPath());
         Thread.sleep(2000);
         assertEquals(1, indexedDocuments.size());
@@ -109,7 +109,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest{
 
     @Test
     public void testIndexFolder() throws URISyntaxException, InterruptedException {
-        URL resource = DocumentIndexTaskTest.class.getResource(folderTitle);
+        URL resource = DocumentIndexManagerTest.class.getResource(folderTitle);
         indexManager.indexFolder(resource.toURI().getRawPath());
         Thread.sleep(2000);
 
@@ -124,7 +124,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest{
     @Test
     public void testAddFileToTrackedFolder() throws URISyntaxException, InterruptedException, IOException {
         final String searchQuery = "singletonList";
-        URL resource = DocumentIndexTaskTest.class.getResource(folderTitle);
+        URL resource = DocumentIndexManagerTest.class.getResource(folderTitle);
         Path folderPath = Paths.get(resource.toURI());
         indexManager.indexFolder(resource.toURI().getRawPath());
         Thread.sleep(2000);
@@ -144,7 +144,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest{
 
     @Test
     public void testRemoveTrackedFolder() throws URISyntaxException, InterruptedException, IOException {
-        URL resource = DocumentIndexTaskTest.class.getResource(fileTitle);
+        URL resource = DocumentIndexManagerTest.class.getResource(fileTitle);
         createdFolder = Paths.get(Paths.get(resource.toURI()).getParent().toAbsolutePath() + "/test");
         Files.createDirectory(createdFolder);
 

@@ -41,15 +41,33 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         listeners = new ArrayList<>();
     }
 
-    public void addListener(FilesystemEventListener listener) {
-        listeners.add(listener);
+    public void unregisterFile(Path filePath) {
+        if (filePath == null) {
+            throw new IllegalArgumentException("File path must not be null");
+        }
+        trackedFiles.remove(filePath);
     }
 
-    public boolean removeListener(FilesystemEventListener listener) {
-        if (listener != null)
-            return listeners.remove(listener);
-        else
-            return false;
+    public void registerFile(Path filePath) {
+        if (filePath == null) {
+            throw new IllegalArgumentException("File path must not be null");
+        }
+        if (!trackedFiles.contains(filePath)) {
+            scheduleNotificationIfNeeded();
+            trackedFiles.add(filePath);
+            LOG.debug("File {} registered", filePath.toAbsolutePath());
+            Path folderPath = filePath.getParent();
+            registerFolder(folderPath, false);
+        } else {
+            LOG.debug("File already registered");
+        }
+    }
+
+    public void registerFolder(Path folderPath) {
+        if (folderPath == null) {
+            throw new IllegalArgumentException("Folder path must not be null");
+        }
+        registerFolder(folderPath, true);
     }
 
     @Override
@@ -89,26 +107,17 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         }
     }
 
-    public void unregisterFile(Path filePath) {
-        trackedFiles.remove(filePath);
-    }
-
-    public void registerFile(Path filePath) {
-        if (filePath != null && !trackedFiles.contains(filePath)) {
-            scheduleNotificationIfNeeded();
-            trackedFiles.add(filePath);
-            LOG.debug("File {} registered", filePath.toAbsolutePath());
-            Path folderPath = filePath.getParent();
-            registerFolder(folderPath, false);
-        } else {
-            LOG.debug("File already registered");
+    public void addListener(FilesystemEventListener listener) {
+        if (listener != null) {
+            listeners.add(listener);
         }
     }
 
-    public void registerFolder(Path folderPath) {
-        if (folderPath != null) {
-            registerFolder(folderPath, true);
-        }
+    public boolean removeListener(FilesystemEventListener listener) {
+        if (listener != null)
+            return listeners.remove(listener);
+        else
+            return false;
     }
 
     private void registerFolder(Path folderPath, boolean shouldTrack) {

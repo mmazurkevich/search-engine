@@ -27,7 +27,7 @@ public class DocumentRemoveTaskTest extends AbstractDocumentIndexationTest {
     @Before
     public void setUp() throws URISyntaxException {
         MockitoAnnotations.initMocks(this);
-        URL resource = DocumentIndexTaskTest.class.getResource(fileTitle);
+        URL resource = DocumentRemoveTaskTest.class.getResource(fileTitle);
         filePath = Paths.get(resource.toURI());
         Document removableDocument = new Document(documentId, true, filePath);
         indexedDocuments = new ArrayList<>();

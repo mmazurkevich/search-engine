@@ -70,7 +70,9 @@ public class FilesystemNotificationScheduler implements Runnable {
     }
 
     void addListener(WatchServiceEventListener listener) {
-        listeners.add(listener);
+        if (listener != null) {
+            listeners.add(listener);
+        }
     }
 
     boolean removeListener(WatchServiceEventListener listener) {

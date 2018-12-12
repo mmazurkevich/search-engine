@@ -1,14 +1,8 @@
 package org.search.engine.tree.util;
 
-/**
- * @author Niall Gallagher
- */
 public class CharSequencesUtil {
 
-    /**
-     * Private constructor, not used.
-     */
-    CharSequencesUtil() {
+    private CharSequencesUtil() {
     }
 
     public static CharSequence getCommonPrefix(CharSequence first, CharSequence second) {
@@ -34,13 +28,4 @@ public class CharSequencesUtil {
         return new StringBuilder().append(first).append(second);
     }
 
-    public static String toString(CharSequence charSequence) {
-        if (charSequence == null) {
-            return null;
-        }
-        if (charSequence instanceof String) {
-            return (String)charSequence;
-        }
-        return new StringBuilder(charSequence.length()).append(charSequence).toString();
-    }
 }

@@ -38,6 +38,22 @@ public class DocumentIndexManager implements FilesystemEventListener {
         notificationManager.addListener(this);
     }
 
+    public void indexFolder(String path) {
+        if (path == null || path.isEmpty()) {
+            throw new IllegalArgumentException("Folder path must not be null or empty");
+        }
+        Path folderPath = Paths.get(path).normalize();
+        indexFolder(folderPath);
+    }
+
+    public void  indexFile(String path) {
+        if (path == null || path.isEmpty()) {
+            throw new IllegalArgumentException("File path must not be null or empty");
+        }
+        Path filePath = Paths.get(path).normalize();
+        indexFile(filePath, true);
+    }
+
     @Override
     public void onFileChanged(FilesystemEvent event, Path filePath) {
         LOG.debug("Handling event: {}  for file: {}", event, filePath);
@@ -74,16 +90,6 @@ public class DocumentIndexManager implements FilesystemEventListener {
                 }
                 break;
         }
-    }
-
-    public void indexFolder(String path) {
-        Path folderPath = Paths.get(path).normalize();
-        indexFolder(folderPath);
-    }
-
-    public void  indexFile(String path) {
-        Path filePath = Paths.get(path).normalize();
-        indexFile(filePath, true);
     }
 
     private void indexFolder(Path folderPath) {
