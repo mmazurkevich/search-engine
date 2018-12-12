@@ -1,11 +1,21 @@
-plugins {
-    id 'java'
-}
+apply plugin: 'java'
+apply plugin: 'application'
 
 group 'org.search'
 version '1.0-SNAPSHOT'
 
+jar {
+    manifest {
+        attributes 'Main-Class': 'org.search.app.AppStartup'
+    }
+    from {
+        configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
 sourceCompatibility = 1.8
+
+mainClassName = 'org.search.app.AppStartup'
 
 repositories {
     mavenCentral()
