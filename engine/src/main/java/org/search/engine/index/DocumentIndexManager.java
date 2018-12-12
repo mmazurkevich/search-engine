@@ -20,21 +20,19 @@ public class DocumentIndexManager implements FilesystemEventListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(DocumentIndexManager.class);
 
+    private final ExecutorService indexingExecutorService = SearchEngineExecutors.getDocumentIndexingExecutor();
+    private final AtomicInteger uniqueDocumentId = new AtomicInteger();
     private final FilesystemNotificationManager notificationManager;
     private final List<Document> indexedDocuments;
-    private final ExecutorService indexingExecutorService;
     private final SearchEngineTree index;
     private final Tokenizer tokenizer;
-    private final AtomicInteger uniqueDocumentId;
 
     public DocumentIndexManager(SearchEngineTree index, List<Document> indexedDocuments, FilesystemNotificationManager notificationManager,
                                 Tokenizer tokenizer) {
-        this.index = index;
         this.notificationManager = notificationManager;
-        this.tokenizer = tokenizer;
         this.indexedDocuments = indexedDocuments;
-        uniqueDocumentId = new AtomicInteger();
-        indexingExecutorService = SearchEngineExecutors.getDocumentIndexingExecutor();
+        this.tokenizer = tokenizer;
+        this.index = index;
         notificationManager.addListener(this);
     }
 

@@ -25,20 +25,15 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
     private static final Logger LOG = LoggerFactory.getLogger(FilesystemNotificationManager.class);
 
     private static final int FILES_TRACK_DELAY_IN_SEC = 2;
+    private final Map<WatchKey, Path> registeredFolders = new ConcurrentHashMap<>();
+    private final List<Path> trackedFiles = new CopyOnWriteArrayList<>();
+    private final List<Path> trackedFolders = new CopyOnWriteArrayList<>();
+    private final List<FilesystemEventListener> listeners = new ArrayList<>();
     private final WatchService watchService;
-    private final Map<WatchKey, Path> registeredFolders;
-    private final List<Path> trackedFiles;
-    private final List<Path> trackedFolders;
-    private final List<FilesystemEventListener> listeners;
     private ScheduledExecutorService notificationExecutor;
-
 
     public FilesystemNotificationManager(WatchService watchService) {
         this.watchService = watchService;
-        registeredFolders = new ConcurrentHashMap<>();
-        trackedFiles = new CopyOnWriteArrayList<>();
-        trackedFolders = new CopyOnWriteArrayList<>();
-        listeners = new ArrayList<>();
     }
 
     public void unregisterFile(Path filePath) {

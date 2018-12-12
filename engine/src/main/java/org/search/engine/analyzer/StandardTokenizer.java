@@ -6,12 +6,8 @@ import java.util.stream.Stream;
 
 public class StandardTokenizer implements Tokenizer {
 
-    private final Set<Character> punctuationMarks;
-
-    public StandardTokenizer() {
-        punctuationMarks = Stream.of('.', ',', '!', '?', ':', ';', '"', '\'', '(', ')', '[', ']', '/', '-', '“', '”', ' ')
-                .collect(Collectors.toCollection(HashSet::new));
-    }
+    private static final Set<Character> punctuationMarks = Stream.of('.', ',', '!', '?', ':', ';', '"', '\'', '(', ')', '[', ']', '/', '-', '“', '”', ' ')
+            .collect(Collectors.toCollection(HashSet::new));
 
     @Override
     public List<String> tokenize(String content) {

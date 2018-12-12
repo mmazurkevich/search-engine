@@ -11,15 +11,11 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 
 class TreeNode {
 
-    private final CharSequence charSequence;
-
-    private TreeNode parent;
-
     private AtomicReferenceArray<TreeNode> outgoingNodes;
-
     private List<TreeNode> outgoingNodesAsList;
-
+    private final CharSequence charSequence;
     private TIntHashSet value;
+    private TreeNode parent;
 
     TreeNode(CharSequence charSequence, TreeNode parent, TIntHashSet value) {
         this.charSequence = charSequence;
@@ -31,7 +27,7 @@ class TreeNode {
         this.parent = parent;
         this.charSequence = charSequence;
         this.value = value;
-        setOutgoingNodes(outgoingNodes);
+        initOutgoingNodes(outgoingNodes);
     }
 
     CharSequence getCharSequence() {
@@ -77,11 +73,7 @@ class TreeNode {
     }
 
     void setOutgoingNodes(List<TreeNode> treeNodes) {
-        TreeNode[] childNodeArray = treeNodes.toArray(new TreeNode[treeNodes.size()]);
-
-        Arrays.sort(childNodeArray, Comparator.comparing(TreeNode::getFirstCharSequenceLetter));
-        this.outgoingNodes = new AtomicReferenceArray<>(childNodeArray);
-        this.outgoingNodesAsList = new AtomicReferenceArrayList<>(this.outgoingNodes);
+        initOutgoingNodes(treeNodes);
     }
 
     void updateOutgoingNode(TreeNode childNode) {
@@ -94,6 +86,14 @@ class TreeNode {
             throw new IllegalStateException("Cannot update the reference to the following child node for the edge starting with '" + childNode.getFirstCharSequenceLetter() + "', no such edge already exists: " + childNode);
         }
         outgoingNodes.set(index, childNode);
+    }
+
+    private void initOutgoingNodes(List<TreeNode> treeNodes) {
+        TreeNode[] childNodeArray = treeNodes.toArray(new TreeNode[treeNodes.size()]);
+
+        Arrays.sort(childNodeArray, Comparator.comparing(TreeNode::getFirstCharSequenceLetter));
+        this.outgoingNodes = new AtomicReferenceArray<>(childNodeArray);
+        this.outgoingNodesAsList = new AtomicReferenceArrayList<>(this.outgoingNodes);
     }
 
     private int binarySearch(AtomicReferenceArray<TreeNode> childNodes, Character firstCharacter) {

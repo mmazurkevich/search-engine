@@ -18,8 +18,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class SearchEngine {
 
-    private final SearchEngineTree index;
-    private final List<Document> indexedDocuments;
+    private final List<Document> indexedDocuments = new CopyOnWriteArrayList<>();
+    private final SearchEngineTree index = new SearchEngineConcurrentTree();
     private final WatchService watchService;
     private final DocumentIndexManager indexManager;
     private final IndexSearchManager searchManager;
@@ -32,8 +32,6 @@ public class SearchEngine {
     public SearchEngine(Tokenizer tokenizer) {
         try {
             watchService = FileSystems.getDefault().newWatchService();
-            index = new SearchEngineConcurrentTree();
-            indexedDocuments = new CopyOnWriteArrayList<>();
             filesystemManager = new FilesystemNotificationManager(watchService);
             indexManager = new DocumentIndexManager(index, indexedDocuments, filesystemManager, tokenizer);
             searchManager = new IndexSearchManager(index, indexedDocuments);

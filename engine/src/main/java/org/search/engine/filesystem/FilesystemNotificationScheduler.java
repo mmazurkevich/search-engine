@@ -8,12 +8,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static java.nio.file.StandardWatchEventKinds.ENTRY_CREATE;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_DELETE;
-import static java.nio.file.StandardWatchEventKinds.ENTRY_MODIFY;
-import static org.search.engine.filesystem.FilesystemEvent.CREATED;
-import static org.search.engine.filesystem.FilesystemEvent.DELETED;
-import static org.search.engine.filesystem.FilesystemEvent.MODIFIED;
+import static java.nio.file.StandardWatchEventKinds.*;
+import static org.search.engine.filesystem.FilesystemEvent.*;
 
 public class FilesystemNotificationScheduler implements Runnable {
 
@@ -21,12 +17,11 @@ public class FilesystemNotificationScheduler implements Runnable {
 
     private final WatchService watchService;
     private final Map<WatchKey, Path> registeredFolders;
-    private final List<WatchServiceEventListener> listeners;
+    private final List<WatchServiceEventListener> listeners = new ArrayList<>();
 
     FilesystemNotificationScheduler(Map<WatchKey, Path> registeredFolders, WatchService watchService) {
         this.registeredFolders = registeredFolders;
         this.watchService = watchService;
-        listeners = new ArrayList<>();
     }
 
     public void run() {
