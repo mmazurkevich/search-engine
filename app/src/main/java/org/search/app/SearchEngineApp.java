@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import static javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED;
 import static javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED;
 
-class SearchEngineApp  extends JFrame {
+class SearchEngineApp extends JFrame {
 
     private final SearchEngine searchEngine;
 

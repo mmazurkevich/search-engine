@@ -1,23 +1,27 @@
 package org.search.engine.index;
 
-import org.search.engine.filesystem.FilesystemNotificationManager;
+import org.search.engine.filesystem.FilesystemNotifier;
 import org.search.engine.tree.SearchEngineTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
-public class DocumentRemoveTask implements Runnable {
+/**
+ * Removal task responsible for delete file from index and unregister it in
+ * notifier.
+ */
+class DocumentRemoveTask implements Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(DocumentRemoveTask.class);
 
     private final List<Document> indexedDocuments;
     private final SearchEngineTree index;
     private final Document removableDocument;
-    private final FilesystemNotificationManager notificationManager;
+    private final FilesystemNotifier notificationManager;
 
     DocumentRemoveTask(Document removableDocument, SearchEngineTree index, List<Document> indexedDocuments,
-                       FilesystemNotificationManager notificationManager) {
+                       FilesystemNotifier notificationManager) {
         this.index = index;
         this.indexedDocuments = indexedDocuments;
         this.removableDocument = removableDocument;

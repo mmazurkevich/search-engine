@@ -4,7 +4,7 @@ import org.search.engine.SearchEngineExecutors;
 import org.search.engine.analyzer.Tokenizer;
 import org.search.engine.filesystem.FilesystemEvent;
 import org.search.engine.filesystem.FilesystemEventListener;
-import org.search.engine.filesystem.FilesystemNotificationManager;
+import org.search.engine.filesystem.FilesystemNotifier;
 import org.search.engine.tree.SearchEngineTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,18 +16,24 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * Class responsible for indexation of folders or file file also handle events coming from
+ * filesystem notifier. Each action start separate task to handle actions independently
+ * and to speed up process of indexation.
+ */
 public class DocumentIndexManager implements FilesystemEventListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(DocumentIndexManager.class);
 
     private final ExecutorService indexingExecutorService = SearchEngineExecutors.getDocumentIndexingExecutor();
+    //Unique concurrent document Id generator
     private final AtomicInteger uniqueDocumentId = new AtomicInteger();
-    private final FilesystemNotificationManager notificationManager;
+    private final FilesystemNotifier notificationManager;
     private final List<Document> indexedDocuments;
     private final SearchEngineTree index;
     private final Tokenizer tokenizer;
 
-    public DocumentIndexManager(SearchEngineTree index, List<Document> indexedDocuments, FilesystemNotificationManager notificationManager,
+    public DocumentIndexManager(SearchEngineTree index, List<Document> indexedDocuments, FilesystemNotifier notificationManager,
                                 Tokenizer tokenizer) {
         this.notificationManager = notificationManager;
         this.indexedDocuments = indexedDocuments;
@@ -36,6 +42,11 @@ public class DocumentIndexManager implements FilesystemEventListener {
         notificationManager.addListener(this);
     }
 
+    /**
+     * Method validate incoming params and start method for concurrent files indexation in given folder
+     *
+     * @param path The path to the folder which should be indexed
+     */
     public void indexFolder(String path) {
         if (path == null || path.isEmpty()) {
             throw new IllegalArgumentException("Folder path must not be null or empty");
@@ -44,7 +55,12 @@ public class DocumentIndexManager implements FilesystemEventListener {
         indexFolder(folderPath);
     }
 
-    public void  indexFile(String path) {
+    /**
+     * Method validate incoming params and start method for concurrent file indexation
+     *
+     * @param path The path to the file which should be indexed
+     */
+    public void indexFile(String path) {
         if (path == null || path.isEmpty()) {
             throw new IllegalArgumentException("File path must not be null or empty");
         }

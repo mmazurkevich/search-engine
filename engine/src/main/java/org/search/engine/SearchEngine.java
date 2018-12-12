@@ -4,9 +4,11 @@ import org.search.engine.analyzer.StandardTokenizer;
 import org.search.engine.analyzer.Tokenizer;
 import org.search.engine.exception.SearchEngineInitializationException;
 import org.search.engine.filesystem.FilesystemNotificationManager;
+import org.search.engine.filesystem.FilesystemNotifier;
 import org.search.engine.index.Document;
 import org.search.engine.index.DocumentIndexManager;
-import org.search.engine.search.IndexSearchManager;
+import org.search.engine.search.SearchManager;
+import org.search.engine.search.SimpleSearchManager;
 import org.search.engine.tree.SearchEngineConcurrentTree;
 import org.search.engine.tree.SearchEngineTree;
 
@@ -22,8 +24,8 @@ public class SearchEngine {
     private final SearchEngineTree index = new SearchEngineConcurrentTree();
     private final WatchService watchService;
     private final DocumentIndexManager indexManager;
-    private final IndexSearchManager searchManager;
-    private final FilesystemNotificationManager filesystemManager;
+    private final SearchManager searchManager;
+    private final FilesystemNotifier filesystemManager;
 
     public SearchEngine() {
         this(new StandardTokenizer());
@@ -34,7 +36,7 @@ public class SearchEngine {
             watchService = FileSystems.getDefault().newWatchService();
             filesystemManager = new FilesystemNotificationManager(watchService);
             indexManager = new DocumentIndexManager(index, indexedDocuments, filesystemManager, tokenizer);
-            searchManager = new IndexSearchManager(index, indexedDocuments);
+            searchManager = new SimpleSearchManager(index, indexedDocuments);
         } catch (IOException e) {
             throw new SearchEngineInitializationException("Can't initialize filesystem WatchService can't track file changes");
         }

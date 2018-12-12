@@ -4,17 +4,24 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class WhitespaceTokenizer implements Tokenizer{
+/**
+ * One of the simplest tokenizers which end up the word then meet the white
+ * space symbol
+ */
+public class WhitespaceTokenizer implements Tokenizer {
 
     private static final char WHITE_SPACE = ' ';
 
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public List<String> tokenize(String content) {
         if (content != null && !content.isEmpty()) {
             List<String> tokens = new ArrayList<>();
             StringBuilder token = new StringBuilder();
             boolean isToken = false;
-            for(int i = 0; i < content.length(); i++) {
+            for (int i = 0; i < content.length(); i++) {
                 char ch = content.charAt(i);
                 if (ch == WHITE_SPACE && isToken) {
                     tokens.add(token.toString());

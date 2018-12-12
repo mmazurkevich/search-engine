@@ -7,24 +7,33 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
-public class IndexSearchManager {
+/**
+ * Simple search manager which search by single word and return matched results
+ * by mapping them in indexed documents list.
+ */
+public class SimpleSearchManager implements SearchManager{
 
-    private static final Logger LOG = LoggerFactory.getLogger(IndexSearchManager.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SimpleSearchManager.class);
 
     private final SearchEngineTree index;
     private final List<Document> indexedDocuments;
 
-    public IndexSearchManager(SearchEngineTree index, List<Document> indexedDocuments) {
+    public SimpleSearchManager(SearchEngineTree index, List<Document> indexedDocuments) {
         this.index = index;
         this.indexedDocuments = indexedDocuments;
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public List<String> searchByQuery(String searchQuery) {
         if (searchQuery != null && !searchQuery.isEmpty()) {
             LOG.debug("Searching documents by query: {}", searchQuery);
-            List<Integer> value = index.getValue(searchQuery);
+            Set<Integer> value = index.getValue(searchQuery);
             if (!value.isEmpty()) {
                 LOG.debug("Found documents: {}", value.size());
                 return indexedDocuments.stream().filter(document -> value.contains(document.getId()))

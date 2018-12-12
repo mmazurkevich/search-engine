@@ -10,7 +10,12 @@ import java.nio.file.Files;
 import java.util.Set;
 import java.util.stream.Stream;
 
-public class DocumentUpdateTask implements Runnable {
+/**
+ * Update task compare difference of new file with already indexed and
+ * add or remove only old and new tokens. Old tokens which were not changed
+ * stay as it is.
+ */
+class DocumentUpdateTask implements Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(DocumentUpdateTask.class);
 
@@ -41,7 +46,7 @@ public class DocumentUpdateTask implements Runnable {
                     index.putMergeOnConflict(token, documentId);
                 }
             }));
-            oldDocumentTokens.forEach(index::removeByKey);
+            oldDocumentTokens.forEach(it -> index.removeByKeyAndValue(it, documentId));
             long end = System.currentTimeMillis();
             LOG.debug("Update index for file: {} took {}ms", updatingDocument.getPath(), (end - start));
         } catch (IOException ex) {

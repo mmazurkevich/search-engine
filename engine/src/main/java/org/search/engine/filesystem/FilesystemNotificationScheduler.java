@@ -11,7 +11,12 @@ import java.util.Map;
 import static java.nio.file.StandardWatchEventKinds.*;
 import static org.search.engine.filesystem.FilesystemEvent.*;
 
-public class FilesystemNotificationScheduler implements Runnable {
+/**
+ * Scheduler job for which listen handle filesystem events and convert them
+ * to the internal events for notification manager. Events came for the
+ * standard watch service.
+ */
+class FilesystemNotificationScheduler implements Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(FilesystemNotificationScheduler.class);
 

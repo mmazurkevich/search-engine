@@ -1,7 +1,7 @@
 package org.search.engine.tree;
 
 import gnu.trove.set.hash.TIntHashSet;
-import org.search.engine.tree.util.*;
+import org.search.engine.tree.util.CharSequencesUtil;
 
 import java.io.IOException;
 import java.util.*;
@@ -37,7 +37,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree {
             switch (classification) {
                 case EXACT_MATCH: {
                     // Node already exist and we add new value to already existing list or creating new one with given value
-                    TIntHashSet existingValue = searchResult.nodeFound.getValue();
+                    final TIntHashSet existingValue = searchResult.nodeFound.getValue();
                     if (existingValue != null) {
                         existingValue.add(value);
                     } else {
@@ -108,7 +108,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree {
     }
 
     @Override
-    public List<Integer> getValue(CharSequence key) {
+    public Set<Integer> getValue(CharSequence key) {
         if (key == null) {
             throw new IllegalArgumentException("The key argument was null or zero-length");
         }
@@ -117,10 +117,10 @@ public class SearchEngineConcurrentTree implements SearchEngineTree {
         if (searchResult.classification.equals(Classification.EXACT_MATCH)) {
             TIntHashSet nodeValues = searchResult.nodeFound.getValue();
             if (nodeValues != null) {
-                return Arrays.stream(nodeValues.toArray()).boxed().collect(Collectors.toList());
+                return Arrays.stream(nodeValues.toArray()).boxed().collect(Collectors.toSet());
             }
         }
-        return Collections.emptyList();
+        return Collections.emptySet();
     }
 
     @Override
@@ -157,7 +157,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree {
     }
 
     @Override
-    public void removeByKey(CharSequence key) {
+    public void removeByKeyAndValue(CharSequence key, int value) {
         if (key == null) {
             throw new IllegalArgumentException("The key argument was null");
         }
@@ -165,7 +165,12 @@ public class SearchEngineConcurrentTree implements SearchEngineTree {
         try {
             SearchResult searchResult = searchTree(key);
             if (searchResult.classification == Classification.EXACT_MATCH && searchResult.nodeFound.getValue() != null) {
-                remove(searchResult.nodeFound);
+                TIntHashSet nodeValues = searchResult.nodeFound.getValue();
+                if (nodeValues.size() > 1) {
+                    nodeValues.remove(value);
+                } else {
+                    remove(searchResult.nodeFound);
+                }
             }
         } finally {
             writeLock.unlock();
@@ -293,8 +298,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree {
                 newParent = createNode(concatenatedEdges, null, parentsRemainingChild.getValue(), parentsRemainingChild.getOutgoingNodes(), parentIsRoot);
                 parentsRemainingChild.getOutgoingNodes().forEach(it -> it.setParent(newParent));
             } else {
-                // Create new parent node which is the same as is currently just without the edge to the
-                // node being deleted
+                // Create new parent node which is the same as is currently just without the edge to the node being deleted
                 newParent = createNode(node.getParent().getCharSequence(), null, node.getParent().getValue(), newEdgesOfParent, parentIsRoot);
             }
 

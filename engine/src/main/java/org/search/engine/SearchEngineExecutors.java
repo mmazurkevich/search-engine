@@ -1,7 +1,12 @@
 package org.search.engine;
 
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
+/**
+ * Class which store executor services for running tasks and scheduler jobs concurrently
+ */
 public class SearchEngineExecutors {
 
     private static final int AVAILABLE_PROCESSORS = Runtime.getRuntime().availableProcessors();
