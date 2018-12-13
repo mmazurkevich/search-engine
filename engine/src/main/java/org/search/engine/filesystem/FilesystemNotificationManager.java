@@ -55,6 +55,11 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
             trackedFiles.add(filePath);
             LOG.debug("File {} registered", filePath.toAbsolutePath());
             Path folderPath = filePath.getParent();
+
+            //Hack for tracking folder delete itself
+            if (folderPath.getParent() != null) {
+                 registerFolder(folderPath.getParent(), false);
+            }
             return registerFolder(folderPath, false);
         } else {
             LOG.debug("File already registered");
@@ -70,8 +75,11 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         if (folderPath == null) {
             throw new IllegalArgumentException("Folder path must not be null");
         }
-        registerFolder(folderPath, true);
-        return registerFolder(folderPath.getParent(), false);
+        //Hack for tracking folder delete itself
+        if (folderPath.getParent() != null) {
+            registerFolder(folderPath.getParent(), false);
+        }
+        return registerFolder(folderPath, true);
     }
 
     /**
@@ -113,15 +121,18 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
      */
     @Override
     public void onFolderEvent(FilesystemEvent event, Path folderPath) {
+        //Created folder in tracked folder, it should be tracked
         if (trackedFolders.contains(folderPath.getParent()) && event == CREATED) {
             listeners.forEach(it -> it.onFolderChanged(event, folderPath));
         } else if (trackedFolders.contains(folderPath)) {
+            //Delete of tracking folder
             if (event == DELETED) {
                 unregisterFolder(folderPath);
             }
             listeners.forEach(it -> it.onFolderChanged(event, folderPath));
         } else if (event == DELETED) {
             try {
+                //Delete of not tracking folder but containing tracked file
                 for (Path file : trackedFiles) {
                     Path parentPath = file.getParent();
                     if (Files.isSameFile(folderPath, parentPath)) {
@@ -176,7 +187,7 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
                 LOG.debug("Folder {} registered", folderPath.toAbsolutePath());
                 isRegistered = true;
             } else {
-                LOG.debug("Folder already registered");
+                LOG.debug("Folder already registered {}", folderPath);
             }
             if (!trackedFolders.contains(folderPath) && shouldTrack)
                 trackedFolders.add(folderPath);

@@ -138,7 +138,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
                         tokenizer);
                 indexingExecutorService.execute(task);
             } else {
-                LOG.warn("Doesn't have access to the file: {}", filePath.toAbsolutePath());
+                LOG.warn("Doesn't have access to the file or it's already indexed: {}", filePath.toAbsolutePath());
             }
         } catch (IOException ex) {
             LOG.warn("File indexation with exception: {}", filePath.toAbsolutePath(), ex);
