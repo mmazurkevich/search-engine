@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Removal task responsible for delete file from index and unregister it in
@@ -31,7 +32,10 @@ class DocumentRemoveTask implements Runnable {
     @Override
     public void run() {
         long start = System.currentTimeMillis();
-        index.removeByValue(removableDocument.getId());
+        int documentId = removableDocument.getId();
+        //Old tokens which should be removed from index
+        Set<String> oldDocumentTokens = index.getKeys(documentId);
+        oldDocumentTokens.forEach(it -> index.removeByKeyAndValue(it, documentId));
         indexedDocuments.remove(removableDocument);
         if (removableDocument.isTracked()) {
             notificationManager.unregisterFile(removableDocument.getPath());
