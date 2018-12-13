@@ -18,6 +18,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static java.nio.file.StandardWatchEventKinds.*;
+import static org.search.engine.filesystem.FilesystemEvent.CREATED;
 import static org.search.engine.filesystem.FilesystemEvent.DELETED;
 
 public class FilesystemNotificationManager implements FilesystemNotificationScheduler.WatchServiceEventListener, FilesystemNotifier {
@@ -109,7 +110,9 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
      */
     @Override
     public void onFolderEvent(FilesystemEvent event, Path folderPath) {
-        if (trackedFolders.contains(folderPath)) {
+        if (trackedFolders.contains(folderPath.getParent()) && event == CREATED) {
+            listeners.forEach(it -> it.onFolderChanged(event, folderPath));
+        } else if (trackedFolders.contains(folderPath)) {
             if (event == DELETED) {
                 unregisterFolder(folderPath);
             }

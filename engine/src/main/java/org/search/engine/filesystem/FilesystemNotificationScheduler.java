@@ -40,21 +40,26 @@ class FilesystemNotificationScheduler implements Runnable {
                     for (WatchEvent<?> event : key.pollEvents()) {
                         Path affectedPath = folderPath.resolve((Path) event.context());
 
-                        if (Files.isDirectory(affectedPath)) {
-                            if (event.kind().equals(ENTRY_CREATE)) {
-                                listeners.forEach(it -> it.onFolderEvent(CREATED, affectedPath));
-                            } else if (event.kind().equals(ENTRY_DELETE)) {
+                        //This is a work around because during remove we can't clearly detect is it a folder or file
+                        if (event.kind().equals(ENTRY_DELETE)) {
+                            if (registeredFolders.containsValue(affectedPath)) {
                                 listeners.forEach(it -> it.onFolderEvent(DELETED, affectedPath));
-                            } else if (event.kind().equals(ENTRY_MODIFY)) {
-                                listeners.forEach(it -> it.onFolderEvent(MODIFIED, affectedPath));
+                            } else {
+                                listeners.forEach(it -> it.onFileEvent(DELETED, affectedPath));
                             }
                         } else {
-                            if (event.kind().equals(ENTRY_CREATE)) {
-                                listeners.forEach(it -> it.onFileEvent(CREATED, affectedPath));
-                            } else if (event.kind().equals(ENTRY_DELETE)) {
-                                listeners.forEach(it -> it.onFileEvent(DELETED, affectedPath));
-                            } else if (event.kind().equals(ENTRY_MODIFY)) {
-                                listeners.forEach(it -> it.onFileEvent(MODIFIED, affectedPath));
+                            if (Files.isDirectory(affectedPath)) {
+                                if (event.kind().equals(ENTRY_CREATE)) {
+                                    listeners.forEach(it -> it.onFolderEvent(CREATED, affectedPath));
+                                } else if (event.kind().equals(ENTRY_MODIFY)) {
+                                    listeners.forEach(it -> it.onFolderEvent(MODIFIED, affectedPath));
+                                }
+                            } else {
+                                if (event.kind().equals(ENTRY_CREATE)) {
+                                    listeners.forEach(it -> it.onFileEvent(CREATED, affectedPath));
+                                } else if (event.kind().equals(ENTRY_MODIFY)) {
+                                    listeners.forEach(it -> it.onFileEvent(MODIFIED, affectedPath));
+                                }
                             }
                         }
                     }

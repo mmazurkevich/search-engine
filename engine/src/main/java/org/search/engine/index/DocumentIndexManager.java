@@ -93,14 +93,10 @@ public class DocumentIndexManager implements FilesystemEventListener {
                 indexFolder(folderPath);
                 break;
             case DELETED:
-                try {
-                    for (Document document : indexedDocuments) {
-                        if (Files.isSameFile(folderPath, document.getParent())) {
-                            removeFileFromIndex(document.getPath());
-                        }
+                for (Document document : indexedDocuments) {
+                    if (folderPath.equals(document.getParent())) {
+                        removeFileFromIndex(document.getPath());
                     }
-                } catch (IOException ex) {
-                    LOG.warn("Unhandled DELETE event for folder: {}", folderPath.toAbsolutePath(), ex);
                 }
                 break;
         }
