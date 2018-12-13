@@ -88,7 +88,6 @@ public class DocumentIndexManager implements FilesystemEventListener {
 
     @Override
     public void onFolderChanged(FilesystemEvent event, Path folderPath) {
-        //We doesn't handle folder MODIFIED event
         LOG.debug("Handling event: {}  for folder: {}", event, folderPath);
         switch (event) {
             case CREATED:

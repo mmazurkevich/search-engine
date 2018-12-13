@@ -58,7 +58,7 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
 
             //Hack for tracking folder delete itself
             if (folderPath.getParent() != null) {
-                 registerFolder(folderPath.getParent(), false);
+                registerFolder(folderPath.getParent(), false);
             }
             return registerFolder(folderPath, false);
         } else {
@@ -98,22 +98,36 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
      */
     @Override
     public boolean unregisterFolder(Path folderPath) {
-        if (registeredFolders.containsValue(folderPath)) {
-            WatchKey key = null;
-            for (Map.Entry<WatchKey, Path> entry : registeredFolders.entrySet()) {
-                if (entry.getValue().equals(folderPath)) {
-                    key = entry.getKey();
+        // For the case then folder which is the child of removing contains no files
+        // but also should be removed from trackedFolders list
+        List<Path> foldersToRemove = new ArrayList<>();
+        trackedFolders.forEach(it -> {
+           if (it.startsWith(folderPath)){
+               foldersToRemove.add(it);
+           }
+        });
+        if (foldersToRemove.size() > 1) {
+            LOG.debug("Child folder with no files also will be unregistered");
+        }
+        boolean wasRemoved = false;
+        for (Path folder: foldersToRemove) {
+            if (registeredFolders.containsValue(folder)) {
+                WatchKey key = null;
+                for (Map.Entry<WatchKey, Path> entry : registeredFolders.entrySet()) {
+                    if (entry.getValue().equals(folder)) {
+                        key = entry.getKey();
+                    }
+                }
+                if (key != null) {
+                    registeredFolders.remove(key);
+                    trackedFolders.remove(folder);
+                    key.cancel();
+                    wasRemoved = true;
+                    LOG.debug("Unregistered folder: " + folder);
                 }
             }
-            if (key != null) {
-                registeredFolders.remove(key);
-                trackedFolders.remove(folderPath);
-                key.cancel();
-                LOG.debug("Unregistered folder: " + folderPath);
-                return true;
-            }
         }
-        return false;
+        return wasRemoved;
     }
 
     /**
