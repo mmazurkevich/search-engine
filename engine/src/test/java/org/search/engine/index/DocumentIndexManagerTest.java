@@ -14,9 +14,9 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -33,7 +33,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
     public void setUp() throws IOException {
         watchService = FileSystems.getDefault().newWatchService();
         notificationManager = new FilesystemNotificationManager(watchService);
-        indexedDocuments = new ArrayList<>();
+        indexedDocuments = new CopyOnWriteArrayList<>();
         index = new SearchEngineConcurrentTree();
         indexManager = new DocumentIndexManager(index, indexedDocuments, notificationManager, new StandardTokenizer());
     }

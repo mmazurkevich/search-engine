@@ -70,7 +70,8 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         if (folderPath == null) {
             throw new IllegalArgumentException("Folder path must not be null");
         }
-        return registerFolder(folderPath, true);
+        registerFolder(folderPath, true);
+        return registerFolder(folderPath.getParent(), false);
     }
 
     /**
@@ -89,18 +90,20 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
      */
     @Override
     public boolean unregisterFolder(Path folderPath) {
-        WatchKey key = null;
-        for (Map.Entry<WatchKey, Path> entry : registeredFolders.entrySet()) {
-            if (entry.getValue().equals(folderPath)) {
-                key = entry.getKey();
+        if (registeredFolders.containsValue(folderPath)) {
+            WatchKey key = null;
+            for (Map.Entry<WatchKey, Path> entry : registeredFolders.entrySet()) {
+                if (entry.getValue().equals(folderPath)) {
+                    key = entry.getKey();
+                }
             }
-        }
-        if (key != null) {
-            registeredFolders.remove(key);
-            trackedFolders.remove(folderPath);
-            key.cancel();
-            LOG.debug("Unregistered folder: " + folderPath);
-            return true;
+            if (key != null) {
+                registeredFolders.remove(key);
+                trackedFolders.remove(folderPath);
+                key.cancel();
+                LOG.debug("Unregistered folder: " + folderPath);
+                return true;
+            }
         }
         return false;
     }

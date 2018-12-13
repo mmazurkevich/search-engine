@@ -86,7 +86,7 @@ public class FilesystemNotificationManagerTest implements FilesystemEventListene
 
     @Test
     public void testTrackFolderAndGetModifiedFileEvent() {
-        Path folderPath = Paths.get("./");
+        Path folderPath = Paths.get("./").toAbsolutePath();
         notificationManager.registerFolder(folderPath);
         notificationManager.onFolderEvent(MODIFIED, folderPath);
         assertLastHandledEvent(MODIFIED, folderPath, ChangedEntity.FOLDER);
@@ -94,16 +94,16 @@ public class FilesystemNotificationManagerTest implements FilesystemEventListene
 
     @Test
     public void testAddFileInTrackedFolder() {
-        Path folderPath = Paths.get("./");
+        Path folderPath = Paths.get("./").toAbsolutePath();
         notificationManager.registerFolder(folderPath);
-        Path filePath = Paths.get("./TestFileOne.txt");
+        Path filePath = Paths.get("./TestFileOne.txt").toAbsolutePath();
         notificationManager.onFileEvent(CREATED, filePath);
         assertLastHandledEvent(CREATED, filePath, ChangedEntity.FILE);
     }
 
     @Test
     public void testRemoveTrackedFolder() {
-        Path folderPath = Paths.get("./");
+        Path folderPath = Paths.get("./").toAbsolutePath();
         notificationManager.registerFolder(folderPath);
         notificationManager.onFolderEvent(DELETED, folderPath);
         assertLastHandledEvent(DELETED, folderPath, ChangedEntity.FOLDER);

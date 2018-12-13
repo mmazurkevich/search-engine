@@ -76,7 +76,9 @@ public class DocumentIndexManager implements FilesystemEventListener {
                 indexFile(filePath, false);
                 break;
             case MODIFIED:
-                reindexFile(filePath);
+                if (isFileIndexed(filePath)) {
+                    reindexFile(filePath);
+                }
                 break;
             case DELETED:
                 removeFileFromIndex(filePath);
@@ -94,8 +96,9 @@ public class DocumentIndexManager implements FilesystemEventListener {
                 break;
             case DELETED:
                 for (Document document : indexedDocuments) {
-                    if (folderPath.equals(document.getParent())) {
+                    if (document.getPath().startsWith(folderPath)) {
                         removeFileFromIndex(document.getPath());
+                        notificationManager.unregisterFolder(document.getParent());
                     }
                 }
                 break;
@@ -176,13 +179,8 @@ public class DocumentIndexManager implements FilesystemEventListener {
         }
     }
 
-    private boolean isFileIndexed(Path filePath) throws IOException {
-        for (Document document : indexedDocuments) {
-            if (Files.isSameFile(filePath, document.getPath())) {
-                return true;
-            }
-        }
-        return false;
+    private boolean isFileIndexed(Path filePath) {
+        return indexedDocuments.stream().anyMatch(it -> it.getPath().equals(filePath));
     }
 
     private boolean hasAccess(Path path) throws IOException {

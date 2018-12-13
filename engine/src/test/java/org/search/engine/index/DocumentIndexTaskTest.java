@@ -11,8 +11,8 @@ import org.search.engine.tree.SearchEngineConcurrentTree;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -33,7 +33,7 @@ public class DocumentIndexTaskTest extends AbstractDocumentIndexationTest {
         URL resource = DocumentIndexTaskTest.class.getResource(fileTitle);
         filePath = Paths.get(resource.toURI());
         indexingDocument = new Document(documentId, true, filePath);
-        indexedDocuments = new ArrayList<>();
+        indexedDocuments = new CopyOnWriteArrayList<>();
         index = new SearchEngineConcurrentTree();
         task = new DocumentIndexTask(indexingDocument, index, indexedDocuments, notificationManager, new StandardTokenizer());
     }

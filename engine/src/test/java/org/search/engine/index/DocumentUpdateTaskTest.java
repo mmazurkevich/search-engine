@@ -13,9 +13,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -32,7 +32,7 @@ public class DocumentUpdateTaskTest extends AbstractDocumentIndexationTest {
                 StandardOpenOption.CREATE);
 
         Document updatedDocument = new Document(documentId, false, filePath);
-        indexedDocuments = new ArrayList<>();
+        indexedDocuments = new CopyOnWriteArrayList<>();
         index = new SearchEngineConcurrentTree();
         Tokenizer tokenizer = new StandardTokenizer();
 

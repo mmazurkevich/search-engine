@@ -63,10 +63,7 @@ class FilesystemNotificationScheduler implements Runnable {
                             }
                         }
                     }
-                    boolean valid = key.reset();
-                    if (!valid) {
-                        registeredFolders.remove(key);
-                    }
+                   key.reset();
                 }
             }
         } catch (InterruptedException ex) {
