@@ -4,6 +4,7 @@ import org.search.engine.SearchEngine;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import static javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED;
@@ -40,7 +41,14 @@ class SearchEngineApp extends JFrame {
             chooser.setDialogTitle("Select folder for indexation");
 
             if (chooser.showDialog(this, "Index") == JFileChooser.APPROVE_OPTION) {
-                searchEngine.indexFolder(chooser.getSelectedFile().getPath());
+                SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+                    @Override
+                    protected Void doInBackground() {
+                        searchEngine.indexFolder(chooser.getSelectedFile().getPath());
+                        return null;
+                    }
+                };
+                worker.execute();
             }
         });
 
@@ -52,7 +60,15 @@ class SearchEngineApp extends JFrame {
             chooser.setDialogTitle("Select file for indexation");
 
             if (chooser.showDialog(this, "Index") == JFileChooser.APPROVE_OPTION) {
-                searchEngine.indexFile(chooser.getSelectedFile().getPath());
+                SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+
+                    @Override
+                    protected Void doInBackground() {
+                        searchEngine.indexFile(chooser.getSelectedFile().getPath());
+                        return null;
+                    }
+                };
+                worker.execute();
             }
         });
 
@@ -70,9 +86,25 @@ class SearchEngineApp extends JFrame {
         JTextField searchField = createSearchField();
         JTextArea searchResultArea = createSearchResultArea();
         JScrollPane scrollPane = createScrollForSearchResult(searchResultArea);
-        searchButton.addActionListener(e -> searchResultArea.setText(searchEngine.search(searchField.getText())
-                .stream()
-                .collect(Collectors.joining("\n"))));
+        searchButton.addActionListener(e -> {
+            SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
+                @Override
+                protected String doInBackground() {
+                    return searchEngine.search(searchField.getText()).stream()
+                            .collect(Collectors.joining("\n"));
+                }
+
+                @Override
+                protected void done() {
+                    try {
+                        searchResultArea.setText(get());
+                    } catch (InterruptedException | ExecutionException e) {
+                        e.printStackTrace();
+                    }
+                }
+            };
+            worker.execute();
+        });
 
         panel.add(searchField);
         panel.add(searchButton);

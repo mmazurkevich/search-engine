@@ -35,10 +35,11 @@ public class SimpleSearchManager implements SearchManager{
             LOG.debug("Searching documents by query: {}", searchQuery);
             Set<Integer> value = index.getValue(searchQuery);
             if (!value.isEmpty()) {
-                LOG.debug("Found documents: {}", value.size());
-                return indexedDocuments.stream().filter(document -> value.contains(document.getId()))
+                List<String> results = indexedDocuments.stream().filter(document -> value.contains(document.getId()))
                         .map(document -> document.getPath().toAbsolutePath().toString())
                         .collect(Collectors.toList());
+                LOG.debug("Found documents: {}", results.size());
+                return results;
             }
         }
         return Collections.emptyList();

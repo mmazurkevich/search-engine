@@ -106,7 +106,8 @@ public class DocumentIndexManager implements FilesystemEventListener {
 
     private void indexFolder(Path folderPath) {
         try {
-            if (hasAccess(folderPath)) {
+            //Check that folder is registered and should not be indexed again (not a clean solution)
+            if (hasAccess(folderPath) && !notificationManager.isFolderRegistered(folderPath)) {
                 Files.walkFileTree(folderPath, new SimpleFileVisitor<Path>() {
 
                     @Override
@@ -122,7 +123,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
                     }
                 });
             } else {
-                LOG.warn("Doesn't have access to the folder: {}", folderPath.toAbsolutePath());
+                LOG.warn("Folder already indexed or no access to folder: {}", folderPath.toAbsolutePath());
             }
         } catch (IOException ex) {
             LOG.warn("Folder indexation with exception: {}", folderPath.toAbsolutePath(), ex);
@@ -137,7 +138,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
                         tokenizer);
                 indexingExecutorService.execute(task);
             } else {
-                LOG.warn("Doesn't have access to the file or it's already indexed: {}", filePath.toAbsolutePath());
+                LOG.warn("File already indexed or no access to file: {}", filePath.toAbsolutePath());
             }
         } catch (IOException ex) {
             LOG.warn("File indexation with exception: {}", filePath.toAbsolutePath(), ex);

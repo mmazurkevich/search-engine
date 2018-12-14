@@ -46,6 +46,28 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
      * {@inheritDoc}
      */
     @Override
+    public boolean isFolderRegistered(Path folderPath) {
+        if (folderPath == null) {
+            throw new IllegalArgumentException("Folder path must not be null");
+        }
+        return trackedFolders.contains(folderPath);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean isFileRegistered(Path filePath) {
+        if (filePath == null) {
+            throw new IllegalArgumentException("File path must not be null");
+        }
+        return trackedFiles.contains(filePath);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
     public boolean registerFile(Path filePath) {
         if (filePath == null) {
             throw new IllegalArgumentException("File path must not be null");

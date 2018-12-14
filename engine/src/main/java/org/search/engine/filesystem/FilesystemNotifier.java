@@ -11,6 +11,22 @@ import java.nio.file.Path;
 public interface FilesystemNotifier {
 
     /**
+     * Method check does folder registered in the notifier
+     *
+     * @param folderPath The path to the registered folder
+     * @return identify if the folder is registered in the notifier
+     */
+    boolean isFolderRegistered(Path folderPath);
+
+    /**
+     * Method check does file registered in the notifier
+     *
+     * @param filePath The path to the registered file
+     * @return identify if the file is registered in the notifier
+     */
+    boolean isFileRegistered(Path filePath);
+
+    /**
      * Method register certain file to be tracked in the system
      *
      * @param filePath The path to the file which want to be tracked
