@@ -43,6 +43,13 @@ public interface FilesystemNotifier {
      */
     boolean registerFolder(Path folderPath);
 
+    /**
+     * Method register indexing folder parent for tracking itself folder delete
+     *
+     * @param folderPath The path to the registered folder
+     * @return identify if the folder was registered in the notifier
+     */
+    boolean registerParentFolder(Path folderPath);
 
     /**
      * Method unregister file from the been tracked by notification service

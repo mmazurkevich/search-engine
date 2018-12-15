@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.junit.Assert.assertEquals;
@@ -33,7 +34,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
     public void setUp() throws IOException {
         watchService = FileSystems.getDefault().newWatchService();
         notificationManager = new FilesystemNotificationManager(watchService);
-        indexedDocuments = new CopyOnWriteArrayList<>();
+        indexedDocuments = new ConcurrentHashMap<>();
         index = new SearchEngineConcurrentTree();
         indexManager = new DocumentIndexManager(index, indexedDocuments, notificationManager, new StandardTokenizer());
     }

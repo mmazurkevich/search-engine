@@ -12,7 +12,10 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -31,10 +34,13 @@ public class DocumentRemoveTaskTest extends AbstractDocumentIndexationTest {
         URL resource = DocumentRemoveTaskTest.class.getResource(fileTitle);
         filePath = Paths.get(resource.toURI());
         Document removableDocument = new Document(documentId, true, filePath);
-        indexedDocuments = new CopyOnWriteArrayList<>();
+        indexedDocuments = new ConcurrentHashMap<>();
         index = new SearchEngineConcurrentTree();
-        DocumentIndexTask indexTask = new DocumentIndexTask(removableDocument, index, indexedDocuments, notificationManager, new StandardTokenizer());
+        BlockingQueue<DocumentLine> documentLinesQueue = new LinkedBlockingQueue<>();
+        DocumentReadTask indexTask = new DocumentReadTask(removableDocument, indexedDocuments, documentLinesQueue, notificationManager);
+        IndexationSchedulerTask scheduler = new IndexationSchedulerTask(documentLinesQueue, index, new StandardTokenizer());
         indexTask.run();
+        scheduler.run();
         removeTask = new DocumentRemoveTask(removableDocument, index, indexedDocuments, notificationManager);
     }
 

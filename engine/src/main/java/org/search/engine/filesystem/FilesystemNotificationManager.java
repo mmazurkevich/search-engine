@@ -12,10 +12,8 @@ import java.nio.file.WatchService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.Set;
+import java.util.concurrent.*;
 
 import static java.nio.file.StandardWatchEventKinds.*;
 import static org.search.engine.filesystem.FilesystemEvent.CREATED;
@@ -28,12 +26,12 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
     private static final int FILES_TRACK_DELAY_IN_SEC = 2;
     // Registered folder by notification folder can be registered but not be actually tracked by user,
     // it's because of tracking files we should register it's folder for track changes with file itself
-    private final Map<WatchKey, Path> registeredFolders = new ConcurrentHashMap<>();
+    private final Map<Path, WatchKey> registeredFolders = new ConcurrentHashMap<>();
     // Files which changes tracked by system and were registered in the system by track. CopyOnWriteArrayList
     // used because of possibility of concurrent changes came from watch service and by user itself
-    private final List<Path> trackedFiles = new CopyOnWriteArrayList<>();
+    private final Set<Path> trackedFiles = ConcurrentHashMap.newKeySet();
     // Folders which changes tracked by system and were registered in the system by track.
-    private final List<Path> trackedFolders = new CopyOnWriteArrayList<>();
+    private final Set<Path> trackedFolders = ConcurrentHashMap.newKeySet();
     private final List<FilesystemEventListener> listeners = new ArrayList<>();
     private final WatchService watchService;
     private ScheduledExecutorService notificationExecutor;
@@ -97,11 +95,18 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         if (folderPath == null) {
             throw new IllegalArgumentException("Folder path must not be null");
         }
-        //Hack for tracking folder delete itself
-        if (folderPath.getParent() != null) {
-            registerFolder(folderPath.getParent(), false);
-        }
         return registerFolder(folderPath, true);
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public boolean registerParentFolder(Path folderPath) {
+        if (folderPath == null) {
+            throw new IllegalArgumentException("Folder path must not be null");
+        }
+        return registerFolder(folderPath, false);
     }
 
     /**
@@ -124,29 +129,22 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         // but also should be removed from trackedFolders list
         List<Path> foldersToRemove = new ArrayList<>();
         trackedFolders.forEach(it -> {
-           if (it.startsWith(folderPath)){
-               foldersToRemove.add(it);
-           }
+            if (it.startsWith(folderPath)) {
+                foldersToRemove.add(it);
+            }
         });
         if (foldersToRemove.size() > 1) {
             LOG.debug("Child folder with no files also will be unregistered");
         }
         boolean wasRemoved = false;
-        for (Path folder: foldersToRemove) {
-            if (registeredFolders.containsValue(folder)) {
-                WatchKey key = null;
-                for (Map.Entry<WatchKey, Path> entry : registeredFolders.entrySet()) {
-                    if (entry.getValue().equals(folder)) {
-                        key = entry.getKey();
-                    }
-                }
-                if (key != null) {
-                    registeredFolders.remove(key);
-                    trackedFolders.remove(folder);
-                    key.cancel();
-                    wasRemoved = true;
-                    LOG.debug("Unregistered folder: " + folder);
-                }
+        for (Path folder : foldersToRemove) {
+            WatchKey key = registeredFolders.get(folder);
+            if (key != null) {
+                registeredFolders.remove(folder);
+                trackedFolders.remove(folder);
+                key.cancel();
+                wasRemoved = true;
+                LOG.debug("Unregistered folder: " + folder);
             }
         }
         return wasRemoved;
@@ -216,10 +214,10 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
     private boolean registerFolder(Path folderPath, boolean shouldTrack) {
         try {
             boolean isRegistered = false;
-            if (!registeredFolders.containsValue(folderPath)) {
+            if (!registeredFolders.containsKey(folderPath)) {
                 scheduleNotificationIfNeeded();
                 WatchKey key = folderPath.register(watchService, ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE);
-                registeredFolders.put(key, folderPath);
+                registeredFolders.put(folderPath, key);
                 LOG.debug("Folder {} registered", folderPath.toAbsolutePath());
                 isRegistered = true;
             } else {
@@ -236,7 +234,7 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
 
     private void scheduleNotificationIfNeeded() {
         if (notificationExecutor == null) {
-            notificationExecutor = SearchEngineExecutors.getNotificationManagerExecutor();
+            notificationExecutor = SearchEngineExecutors.getScheduledExecutor();
             FilesystemNotificationScheduler notificationScheduler = new FilesystemNotificationScheduler(registeredFolders, watchService);
             notificationScheduler.addListener(this);
             notificationExecutor.scheduleWithFixedDelay(notificationScheduler, 0, FILES_TRACK_DELAY_IN_SEC, TimeUnit.SECONDS);

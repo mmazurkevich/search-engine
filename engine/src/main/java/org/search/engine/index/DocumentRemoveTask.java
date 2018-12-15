@@ -5,7 +5,9 @@ import org.search.engine.tree.SearchEngineTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -16,12 +18,12 @@ class DocumentRemoveTask implements Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(DocumentRemoveTask.class);
 
-    private final List<Document> indexedDocuments;
+    private final Map<Path, Document> indexedDocuments;
     private final SearchEngineTree index;
     private final Document removableDocument;
     private final FilesystemNotifier notificationManager;
 
-    DocumentRemoveTask(Document removableDocument, SearchEngineTree index, List<Document> indexedDocuments,
+    DocumentRemoveTask(Document removableDocument, SearchEngineTree index, Map<Path, Document> indexedDocuments,
                        FilesystemNotifier notificationManager) {
         this.index = index;
         this.indexedDocuments = indexedDocuments;
@@ -36,7 +38,7 @@ class DocumentRemoveTask implements Runnable {
         //Old tokens which should be removed from index
         Set<String> oldDocumentTokens = index.getKeys(documentId);
         oldDocumentTokens.forEach(it -> index.removeByKeyAndValue(it, documentId));
-        indexedDocuments.remove(removableDocument);
+        indexedDocuments.remove(removableDocument.getPath());
         if (removableDocument.isTracked()) {
             notificationManager.unregisterFile(removableDocument.getPath());
         }

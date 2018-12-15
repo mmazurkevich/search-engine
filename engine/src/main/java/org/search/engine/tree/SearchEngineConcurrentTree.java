@@ -37,9 +37,6 @@ public class SearchEngineConcurrentTree implements SearchEngineTree {
             throw new IllegalArgumentException("The key argument was null or zero-length");
         }
 
-        TIntHashSet newValues = new TIntHashSet();
-        newValues.add(value);
-
         writeLock.lock();
         try {
             SearchResult searchResult = searchTree(key);
@@ -53,6 +50,8 @@ public class SearchEngineConcurrentTree implements SearchEngineTree {
                     if (existingValue != null) {
                         existingValue.add(value);
                     } else {
+                        TIntHashSet newValues = new TIntHashSet();
+                        newValues.add(value);
                         searchResult.nodeFound.setValue(newValues);
                     }
                     break;
@@ -60,6 +59,9 @@ public class SearchEngineConcurrentTree implements SearchEngineTree {
                 case KEY_ENDS_MID_EDGE: {
                     // Split the node in two: Create a new parent node storing the new value, and a new child node
                     // holding the original value and edges from the existing node
+                    TIntHashSet newValues = new TIntHashSet();
+                    newValues.add(value);
+
                     CharSequence keyCharsFromStartOfNodeFound = key.subSequence(searchResult.charsMatched - searchResult.charsMatchedInNodeFound, key.length());
                     CharSequence commonPrefix = CharSequencesUtil.getCommonPrefix(keyCharsFromStartOfNodeFound, searchResult.nodeFound.getCharSequence());
                     CharSequence suffixFromExistingEdge = CharSequencesUtil.subtractPrefix(searchResult.nodeFound.getCharSequence(), commonPrefix);
@@ -74,6 +76,9 @@ public class SearchEngineConcurrentTree implements SearchEngineTree {
                     boolean isRoot = searchResult.nodeFound == root;
                     // Add a new child to the node, containing end characters from the key. This is the only branch
                     // which allows an edge to be added to the root.
+                    TIntHashSet newValues = new TIntHashSet();
+                    newValues.add(value);
+
                     CharSequence keySuffix = key.subSequence(searchResult.charsMatched, key.length());
                     TreeNode newChild = createNode(keySuffix, null, newValues, Collections.emptyList(), false);
 
@@ -96,6 +101,8 @@ public class SearchEngineConcurrentTree implements SearchEngineTree {
                     // Create a new node containing the unmatched characters from the end of the key. Create a new
                     // node containing the unmatched characters of founded node, and copy the original edges and the value .
                     // Creating new node containing both nodes and re-add it to it's parent
+                    TIntHashSet newValues = new TIntHashSet();
+                    newValues.add(value);
 
                     CharSequence keyCharsFromStartOfNodeFound = key.subSequence(searchResult.charsMatched - searchResult.charsMatchedInNodeFound, key.length());
                     CharSequence commonPrefix = CharSequencesUtil.getCommonPrefix(keyCharsFromStartOfNodeFound, searchResult.nodeFound.getCharSequence());

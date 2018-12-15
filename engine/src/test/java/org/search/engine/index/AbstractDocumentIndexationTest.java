@@ -4,6 +4,7 @@ import org.search.engine.tree.SearchEngineTree;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 abstract class AbstractDocumentIndexationTest {
 
@@ -12,6 +13,6 @@ abstract class AbstractDocumentIndexationTest {
     final String folderTitle = "/testFolder";
     final String searchQuery = "surfeits";
     Path filePath;
-    List<Document> indexedDocuments;
+    Map<Path, Document> indexedDocuments;
     SearchEngineTree index;
 }

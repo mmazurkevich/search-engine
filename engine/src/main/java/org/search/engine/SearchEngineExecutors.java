@@ -9,32 +9,48 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class SearchEngineExecutors {
 
-    private static final int AVAILABLE_PROCESSORS = Runtime.getRuntime().availableProcessors();
-    private static ScheduledExecutorService notificationManagerExecutor;
-    private static ExecutorService documentIndexingExecutor;
+    private static final int SCHEDULER_THREADS;
+    private static final int EXECUTOR_THREADS;
+    private static ScheduledExecutorService scheduledExecutor;
+    private static ExecutorService executorService;
+    static {
+        int availableProcessors = Runtime.getRuntime().availableProcessors();
+        int ratio = 4;
+        SCHEDULER_THREADS = (int)Math.ceil(availableProcessors / ratio);
+        int remainingCores = availableProcessors - SCHEDULER_THREADS;
+        if (remainingCores < 1) {
+            EXECUTOR_THREADS = 1;
+        } else {
+            EXECUTOR_THREADS = remainingCores;
+        }
+    }
 
     private SearchEngineExecutors() {
     }
 
-    public static ScheduledExecutorService getNotificationManagerExecutor() {
-        if (notificationManagerExecutor == null) {
-            synchronized (SearchEngineExecutors.class) {
-                if (notificationManagerExecutor == null) {
-                    notificationManagerExecutor = Executors.newSingleThreadScheduledExecutor();
-                }
-            }
-        }
-        return notificationManagerExecutor;
+    public static int getSchedulerThreads() {
+        return SCHEDULER_THREADS;
     }
 
-    public static ExecutorService getDocumentIndexingExecutor() {
-        if (documentIndexingExecutor == null) {
+    public static ScheduledExecutorService getScheduledExecutor() {
+        if (scheduledExecutor == null) {
             synchronized (SearchEngineExecutors.class) {
-                if (documentIndexingExecutor == null) {
-                    documentIndexingExecutor = Executors.newFixedThreadPool(AVAILABLE_PROCESSORS);
+                if (scheduledExecutor == null) {
+                    scheduledExecutor = Executors.newScheduledThreadPool(SCHEDULER_THREADS + 1);
                 }
             }
         }
-        return documentIndexingExecutor;
+        return scheduledExecutor;
+    }
+
+    public static ExecutorService getExecutorService() {
+        if (executorService == null) {
+            synchronized (SearchEngineExecutors.class) {
+                if (executorService == null) {
+                    executorService = Executors.newFixedThreadPool(EXECUTOR_THREADS);
+                }
+            }
+        }
+        return executorService;
     }
 }

@@ -12,16 +12,17 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
 import java.util.Set;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.*;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.verify;
 import static org.mockito.internal.verification.VerificationModeFactory.times;
 
-public class DocumentIndexTaskTest extends AbstractDocumentIndexationTest {
+public class DocumentIndexationTest extends AbstractDocumentIndexationTest {
 
-    private DocumentIndexTask task;
+    private DocumentReadTask task;
+    private IndexationSchedulerTask scheduler;
     private Document indexingDocument;
 
     @Mock
@@ -30,12 +31,14 @@ public class DocumentIndexTaskTest extends AbstractDocumentIndexationTest {
     @Before
     public void setUp() throws URISyntaxException {
         MockitoAnnotations.initMocks(this);
-        URL resource = DocumentIndexTaskTest.class.getResource(fileTitle);
+        URL resource = DocumentIndexationTest.class.getResource(fileTitle);
         filePath = Paths.get(resource.toURI());
         indexingDocument = new Document(documentId, true, filePath);
-        indexedDocuments = new CopyOnWriteArrayList<>();
+        indexedDocuments = new ConcurrentHashMap<>();
         index = new SearchEngineConcurrentTree();
-        task = new DocumentIndexTask(indexingDocument, index, indexedDocuments, notificationManager, new StandardTokenizer());
+        BlockingQueue<DocumentLine> documentLinesQueue = new LinkedBlockingQueue<>();
+        task = new DocumentReadTask(indexingDocument, indexedDocuments, documentLinesQueue, notificationManager);
+        scheduler = new IndexationSchedulerTask(documentLinesQueue, index, new StandardTokenizer());
     }
 
     @Test
@@ -45,10 +48,11 @@ public class DocumentIndexTaskTest extends AbstractDocumentIndexationTest {
 
         task.run();
         verify(notificationManager, times(1)).registerFile(filePath);
+        scheduler.run();
 
         assertEquals(7, index.size());
         assertEquals(1, indexedDocuments.size());
-        assertTrue(indexedDocuments.contains(indexingDocument));
+        assertTrue(indexedDocuments.containsValue(indexingDocument));
 
         Set<Integer> searchResult = index.getValue(searchQuery);
         assertEquals(1, searchResult.size());

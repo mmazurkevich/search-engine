@@ -14,8 +14,11 @@ import org.search.engine.tree.SearchEngineTree;
 
 import java.io.IOException;
 import java.nio.file.FileSystems;
+import java.nio.file.Path;
 import java.nio.file.WatchService;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -28,7 +31,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class SearchEngine {
 
-    private final List<Document> indexedDocuments = new CopyOnWriteArrayList<>();
+    private final Map<Path, Document> indexedDocuments = new ConcurrentHashMap<>();
     private final SearchEngineTree index = new SearchEngineConcurrentTree();
     private final WatchService watchService;
     private final DocumentIndexManager indexManager;

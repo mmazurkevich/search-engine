@@ -12,8 +12,10 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
+import java.util.Map;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -24,21 +26,26 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DocumentIndexManager implements FilesystemEventListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(DocumentIndexManager.class);
+    private static final int QUEUE_CAPACITY = 3_000_000;
 
-    private final ExecutorService indexingExecutorService = SearchEngineExecutors.getDocumentIndexingExecutor();
     //Unique concurrent document Id generator
     private final AtomicInteger uniqueDocumentId = new AtomicInteger();
     private final FilesystemNotifier notificationManager;
-    private final List<Document> indexedDocuments;
+    private final Map<Path, Document> indexedDocuments;
+    private final BlockingQueue<DocumentLine> documentLinesQueue;
     private final SearchEngineTree index;
     private final Tokenizer tokenizer;
+    private final ExecutorService indexingExecutorService;
+    private ScheduledExecutorService indexationExecutor;
 
-    public DocumentIndexManager(SearchEngineTree index, List<Document> indexedDocuments, FilesystemNotifier notificationManager,
+    public DocumentIndexManager(SearchEngineTree index,  Map<Path, Document> indexedDocuments, FilesystemNotifier notificationManager,
                                 Tokenizer tokenizer) {
         this.notificationManager = notificationManager;
         this.indexedDocuments = indexedDocuments;
+        this.documentLinesQueue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
         this.tokenizer = tokenizer;
         this.index = index;
+        this.indexingExecutorService = SearchEngineExecutors.getExecutorService();
         notificationManager.addListener(this);
     }
 
@@ -81,7 +88,12 @@ public class DocumentIndexManager implements FilesystemEventListener {
                 }
                 break;
             case DELETED:
-                removeFileFromIndex(filePath);
+                for (Map.Entry<Path, Document> documentEntry : indexedDocuments.entrySet()) {
+                    Document document = documentEntry.getValue();
+                    if (filePath.equals(document.getPath())) {
+                        removeDocumentFromIndex(document);
+                    }
+                }
                 break;
         }
     }
@@ -94,9 +106,10 @@ public class DocumentIndexManager implements FilesystemEventListener {
                 indexFolder(folderPath);
                 break;
             case DELETED:
-                for (Document document : indexedDocuments) {
+                for (Map.Entry<Path, Document> documentEntry : indexedDocuments.entrySet()) {
+                    Document document = documentEntry.getValue();
                     if (document.getPath().startsWith(folderPath)) {
-                        removeFileFromIndex(document.getPath());
+                        removeDocumentFromIndex(document);
                         notificationManager.unregisterFolder(document.getParent());
                     }
                 }
@@ -108,6 +121,10 @@ public class DocumentIndexManager implements FilesystemEventListener {
         try {
             //Check that folder is registered and should not be indexed again (not a clean solution)
             if (hasAccess(folderPath) && !notificationManager.isFolderRegistered(folderPath)) {
+                //Register indexing folder parent for tracking itself folder delete
+                if (folderPath.getParent() != null) {
+                    notificationManager.registerParentFolder(folderPath.getParent());
+                }
                 Files.walkFileTree(folderPath, new SimpleFileVisitor<Path>() {
 
                     @Override
@@ -134,9 +151,9 @@ public class DocumentIndexManager implements FilesystemEventListener {
         try {
             if (hasAccess(filePath) && !isFileIndexed(filePath)) {
                 Document document = new Document(uniqueDocumentId.incrementAndGet(), shouldTrack, filePath);
-                DocumentIndexTask task = new DocumentIndexTask(document, index, indexedDocuments, notificationManager,
-                        tokenizer);
+                DocumentReadTask task = new DocumentReadTask(document, indexedDocuments, documentLinesQueue, notificationManager);
                 indexingExecutorService.execute(task);
+                scheduleIndexationIfNeeded();
             } else {
                 LOG.warn("File already indexed or no access to file: {}", filePath.toAbsolutePath());
             }
@@ -145,13 +162,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
         }
     }
 
-    private void removeFileFromIndex(Path filePath) {
-        Document removableDocument = null;
-        for (Document document : indexedDocuments) {
-            if (filePath.equals(document.getPath())) {
-                removableDocument = document;
-            }
-        }
+    private void removeDocumentFromIndex(Document removableDocument) {
         if (removableDocument != null) {
             DocumentRemoveTask task = new DocumentRemoveTask(removableDocument, index, indexedDocuments, notificationManager);
             indexingExecutorService.execute(task);
@@ -162,11 +173,13 @@ public class DocumentIndexManager implements FilesystemEventListener {
         try {
             if (hasAccess(filePath)) {
                 Document updatingDocument = null;
-                for (Document document : indexedDocuments) {
+                for (Map.Entry<Path, Document> documentEntry : indexedDocuments.entrySet()) {
+                    Document document = documentEntry.getValue();
                     if (Files.isSameFile(filePath, document.getPath())) {
                         updatingDocument = document;
                     }
                 }
+
                 if (updatingDocument != null) {
                     DocumentUpdateTask task = new DocumentUpdateTask(updatingDocument, index, tokenizer);
                     indexingExecutorService.submit(task);
@@ -180,7 +193,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
     }
 
     private boolean isFileIndexed(Path filePath) {
-        return indexedDocuments.stream().anyMatch(it -> it.getPath().equals(filePath));
+        return indexedDocuments.containsKey(filePath);
     }
 
     private boolean hasAccess(Path path) throws IOException {
@@ -188,5 +201,16 @@ public class DocumentIndexManager implements FilesystemEventListener {
             return Files.isReadable(path) && !Files.isHidden(path);
         else
             return Files.exists(path) && Files.isDirectory(path);
+    }
+
+    private void scheduleIndexationIfNeeded() {
+        if (indexationExecutor == null) {
+            indexationExecutor = SearchEngineExecutors.getScheduledExecutor();
+            int schedulerThreads = SearchEngineExecutors.getSchedulerThreads();
+            for (int i= 0; i < schedulerThreads; i++) {
+                IndexationSchedulerTask indexScheduler = new IndexationSchedulerTask(documentLinesQueue, index, tokenizer);
+                indexationExecutor.scheduleWithFixedDelay(indexScheduler, 0,1, TimeUnit.SECONDS);
+            }
+        }
     }
 }

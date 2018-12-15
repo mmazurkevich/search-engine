@@ -5,8 +5,10 @@ import org.search.engine.tree.SearchEngineTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -19,9 +21,9 @@ public class SimpleSearchManager implements SearchManager{
     private static final Logger LOG = LoggerFactory.getLogger(SimpleSearchManager.class);
 
     private final SearchEngineTree index;
-    private final List<Document> indexedDocuments;
+    private final Map<Path, Document> indexedDocuments;
 
-    public SimpleSearchManager(SearchEngineTree index, List<Document> indexedDocuments) {
+    public SimpleSearchManager(SearchEngineTree index,  Map<Path, Document> indexedDocuments) {
         this.index = index;
         this.indexedDocuments = indexedDocuments;
     }
@@ -35,8 +37,9 @@ public class SimpleSearchManager implements SearchManager{
             LOG.debug("Searching documents by query: {}", searchQuery);
             Set<Integer> value = index.getValue(searchQuery);
             if (!value.isEmpty()) {
-                List<String> results = indexedDocuments.stream().filter(document -> value.contains(document.getId()))
-                        .map(document -> document.getPath().toAbsolutePath().toString())
+                List<String> results = indexedDocuments.entrySet().stream()
+                        .filter(entry -> value.contains(entry.getValue().getId()))
+                        .map(entry -> entry.getValue().getPath().toAbsolutePath().toString())
                         .collect(Collectors.toList());
                 LOG.debug("Found documents: {}", results.size());
                 return results;

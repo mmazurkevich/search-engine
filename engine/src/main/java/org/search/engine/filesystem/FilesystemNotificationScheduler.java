@@ -21,10 +21,10 @@ class FilesystemNotificationScheduler implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(FilesystemNotificationScheduler.class);
 
     private final WatchService watchService;
-    private final Map<WatchKey, Path> registeredFolders;
+    private final Map<Path, WatchKey> registeredFolders;
     private final List<WatchServiceEventListener> listeners = new ArrayList<>();
 
-    FilesystemNotificationScheduler(Map<WatchKey, Path> registeredFolders, WatchService watchService) {
+    FilesystemNotificationScheduler(Map<Path, WatchKey> registeredFolders, WatchService watchService) {
         this.registeredFolders = registeredFolders;
         this.watchService = watchService;
     }
@@ -32,17 +32,18 @@ class FilesystemNotificationScheduler implements Runnable {
     public void run() {
         try {
             WatchKey key = watchService.take();
+
             if (key != null) {
 
-                Path folderPath = registeredFolders.get(key);
+                Path folderPath = getRegisteredPath(key);
                 if (folderPath != null) {
 
-                    for (WatchEvent<?> event : key.pollEvents()) {
+                    for (WatchEvent event : key.pollEvents()) {
                         Path affectedPath = folderPath.resolve((Path) event.context());
 
                         //This is a work around because during remove we can't clearly detect is it a folder or file
                         if (event.kind().equals(ENTRY_DELETE)) {
-                            if (registeredFolders.containsValue(affectedPath)) {
+                            if (registeredFolders.containsKey(affectedPath)) {
                                 listeners.forEach(it -> it.onFolderEvent(DELETED, affectedPath));
                             } else {
                                 listeners.forEach(it -> it.onFileEvent(DELETED, affectedPath));
@@ -63,11 +64,11 @@ class FilesystemNotificationScheduler implements Runnable {
                             }
                         }
                     }
-                   key.reset();
+                    key.reset();
                 }
             }
-        } catch (InterruptedException ex) {
-            LOG.warn("Scheduler interrupted while retrieves watch keys", ex);
+        } catch (InterruptedException e) {
+            LOG.warn("Scheduler interrupted while retrieves watch keys");
         }
     }
 
@@ -82,6 +83,16 @@ class FilesystemNotificationScheduler implements Runnable {
             return listeners.remove(listener);
         else
             return false;
+    }
+
+    private Path getRegisteredPath(WatchKey key) {
+        Path path = null;
+        for (Map.Entry<Path, WatchKey> entry : registeredFolders.entrySet()) {
+            if (entry.getValue().equals(key)) {
+                path = entry.getKey();
+            }
+        }
+        return path;
     }
 
     interface WatchServiceEventListener {

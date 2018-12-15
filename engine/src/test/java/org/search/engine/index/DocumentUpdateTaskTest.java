@@ -15,7 +15,10 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -32,13 +35,14 @@ public class DocumentUpdateTaskTest extends AbstractDocumentIndexationTest {
                 StandardOpenOption.CREATE);
 
         Document updatedDocument = new Document(documentId, false, filePath);
-        indexedDocuments = new CopyOnWriteArrayList<>();
+        indexedDocuments = new ConcurrentHashMap<>();
         index = new SearchEngineConcurrentTree();
         Tokenizer tokenizer = new StandardTokenizer();
-
-        DocumentIndexTask indexTask = new DocumentIndexTask(updatedDocument, index, indexedDocuments, null, tokenizer);
+        BlockingQueue<DocumentLine> documentLinesQueue = new LinkedBlockingQueue<>();
+        DocumentReadTask indexTask = new DocumentReadTask(updatedDocument, indexedDocuments, documentLinesQueue, null);
+        IndexationSchedulerTask scheduler = new IndexationSchedulerTask(documentLinesQueue, index, new StandardTokenizer());
         indexTask.run();
-
+        scheduler.run();
         updateTask = new DocumentUpdateTask(updatedDocument, index, tokenizer);
     }
 
