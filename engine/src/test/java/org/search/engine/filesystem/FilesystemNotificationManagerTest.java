@@ -80,7 +80,7 @@ public class FilesystemNotificationManagerTest implements FilesystemEventListene
         notificationManager.registerFile(filePath);
 
         Path folderPath = Paths.get("./");
-        notificationManager.onFolderEvent(DELETED, folderPath);
+        notificationManager.onFolderEvent(DELETED, folderPath.toAbsolutePath());
         assertLastHandledEvent(DELETED, filePath, ChangedEntity.FILE);
     }
 

@@ -2,6 +2,7 @@ package org.search.engine.index;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.search.engine.analyzer.StandardTokenizer;
 import org.search.engine.filesystem.FilesystemEvent;
@@ -17,7 +18,6 @@ import java.nio.file.*;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -109,6 +109,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
         assertTrue(indexedDocuments.isEmpty());
     }
 
+    @Ignore
     @Test
     public void testIndexFolder() throws URISyntaxException, InterruptedException {
         URL resource = DocumentIndexManagerTest.class.getResource(folderTitle);
@@ -123,6 +124,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
         assertTrue(searchResult.contains(2));
     }
 
+    @Ignore
     @Test
     public void testAddFileToTrackedFolder() throws URISyntaxException, InterruptedException, IOException {
         final String searchQuery = "singletonList";
@@ -136,7 +138,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
         createdFile = Paths.get(folderPath.toAbsolutePath() + "/tree.txt");
         Files.write(createdFile, Collections.singletonList(searchQuery), StandardCharsets.UTF_8, StandardOpenOption.CREATE);
         indexManager.onFileChanged(FilesystemEvent.CREATED, createdFile);
-        Thread.sleep(1000);
+        Thread.sleep(2000);
 
         assertEquals(3, indexedDocuments.size());
 
@@ -144,6 +146,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
         assertEquals(1, searchResult.size());
     }
 
+    @Ignore
     @Test
     public void testRemoveTrackedFolder() throws URISyntaxException, InterruptedException, IOException {
         URL resource = DocumentIndexManagerTest.class.getResource(fileTitle);

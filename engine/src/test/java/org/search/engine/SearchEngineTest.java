@@ -1,6 +1,7 @@
 package org.search.engine;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.search.engine.analyzer.WhitespaceTokenizer;
 import org.slf4j.Logger;
@@ -23,6 +24,7 @@ public class SearchEngineTest {
         searchEngine = new SearchEngine(new WhitespaceTokenizer());
     }
 
+    @Ignore
     @Test
     public void testDocumentIndexationAndSearch() throws URISyntaxException, InterruptedException {
         URL resource = SearchEngineTest.class.getResource("/TestFileOne.txt");

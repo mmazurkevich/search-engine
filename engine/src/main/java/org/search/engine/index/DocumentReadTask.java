@@ -1,7 +1,5 @@
 package org.search.engine.index;
 
-import org.search.engine.analyzer.StandardTokenizer;
-import org.search.engine.analyzer.Tokenizer;
 import org.search.engine.filesystem.FilesystemNotifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,7 +8,6 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.stream.Stream;
