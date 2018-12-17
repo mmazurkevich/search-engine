@@ -19,7 +19,6 @@ import java.nio.file.WatchService;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * The main class of the library for in-memory documents/folders indexation.

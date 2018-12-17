@@ -1,11 +1,11 @@
 package org.search.app;
 
+import org.search.app.listener.SearchActionListener;
+import org.search.app.listener.SearchKeyListener;
 import org.search.engine.SearchEngine;
 
 import javax.swing.*;
 import java.awt.*;
-import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
 
 import static javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED;
 import static javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED;
@@ -80,42 +80,28 @@ class SearchEngineApp extends JFrame {
     }
 
     private JPanel createUIPanel() {
-        final JPanel panel = new JPanel();
+        final JPanel panel = new JPanel(new BorderLayout(5,5));
+        panel.setBorder(BorderFactory.createEmptyBorder(5, 10, 10, 10));
 
-        JButton searchButton = new JButton("Search");
-        JTextField searchField = createSearchField();
-        JTextArea searchResultArea = createSearchResultArea();
-        JScrollPane scrollPane = createScrollForSearchResult(searchResultArea);
-        searchButton.addActionListener(e -> {
-            SwingWorker<String, Void> worker = new SwingWorker<String, Void>() {
-                @Override
-                protected String doInBackground() {
-                    return searchEngine.search(searchField.getText()).stream()
-                            .collect(Collectors.joining("\n"));
-                }
-
-                @Override
-                protected void done() {
-                    try {
-                        searchResultArea.setText(get());
-                    } catch (InterruptedException | ExecutionException e) {
-                        e.printStackTrace();
-                    }
-                }
-            };
-            worker.execute();
-        });
-
-        panel.add(searchField);
-        panel.add(searchButton);
-        panel.add(scrollPane);
-        return panel;
-    }
-
-    private JTextField createSearchField() {
+        final JButton searchButton = new JButton("Search");
         final JTextField searchField = new JTextField();
-        searchField.setPreferredSize(new Dimension(480, 28));
-        return searchField;
+        final JTextArea searchResultArea = createSearchResultArea();
+        final JScrollPane scrollPane = new JScrollPane(searchResultArea, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED);
+
+        searchButton.addActionListener(new SearchActionListener(searchEngine, searchField, searchResultArea));
+        searchField.addKeyListener(new SearchKeyListener(searchEngine, searchField, searchResultArea));
+
+        JPanel searchPanel = new JPanel(new BorderLayout());
+        searchPanel.add(searchField,BorderLayout.CENTER);
+        searchPanel.add(searchButton,BorderLayout.EAST);
+
+        panel.add(searchPanel, BorderLayout.PAGE_START);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        final JTextArea documentPreviewArea = createDocumentPreviewArea();
+        panel.add(documentPreviewArea, BorderLayout.PAGE_END);
+
+        return panel;
     }
 
     private JTextArea createSearchResultArea() {
@@ -124,9 +110,11 @@ class SearchEngineApp extends JFrame {
         return searchResultArea;
     }
 
-    private JScrollPane createScrollForSearchResult(JTextArea searchResults) {
-        final JScrollPane scrollPane = new JScrollPane(searchResults, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.setPreferredSize(new Dimension(560, 300));
-        return scrollPane;
+    private JTextArea createDocumentPreviewArea() {
+        final JTextArea documentPreviewArea = new JTextArea();
+        documentPreviewArea.setPreferredSize(new Dimension(560, 100));
+        documentPreviewArea.setEditable(false);
+        return documentPreviewArea;
     }
+
 }
