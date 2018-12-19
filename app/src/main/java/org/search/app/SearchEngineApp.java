@@ -1,10 +1,15 @@
 package org.search.app;
 
+import org.search.app.component.JSearchResultTable;
+import org.search.app.listener.FileSelectionListener;
 import org.search.app.listener.SearchActionListener;
 import org.search.app.listener.SearchKeyListener;
+import org.search.app.model.SearchResultTableModel;
 import org.search.engine.SearchEngine;
 
 import javax.swing.*;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 
 import static javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED;
@@ -85,11 +90,16 @@ class SearchEngineApp extends JFrame {
 
         final JButton searchButton = new JButton("Search");
         final JTextField searchField = new JTextField();
-        final JTextArea searchResultArea = createSearchResultArea();
-        final JScrollPane scrollPane = new JScrollPane(searchResultArea, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        final JTextArea documentPreview = createDocumentPreviewArea();
 
-        searchButton.addActionListener(new SearchActionListener(searchEngine, searchField, searchResultArea));
-        searchField.addKeyListener(new SearchKeyListener(searchEngine, searchField, searchResultArea));
+        SearchResultTableModel tableModel = new SearchResultTableModel();
+        final JSearchResultTable searchResultTable = new JSearchResultTable(tableModel);
+        searchResultTable.setFillsViewportHeight(true);
+        searchResultTable.getSelectionModel().addListSelectionListener(new FileSelectionListener(tableModel, searchResultTable, documentPreview));
+        final JScrollPane scrollPane = new JScrollPane(searchResultTable, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED);
+
+        searchButton.addActionListener(new SearchActionListener(searchEngine, searchField, searchResultTable));
+        searchField.addKeyListener(new SearchKeyListener(searchEngine, searchField, searchResultTable));
 
         JPanel searchPanel = new JPanel(new BorderLayout());
         searchPanel.add(searchField,BorderLayout.CENTER);
@@ -98,21 +108,16 @@ class SearchEngineApp extends JFrame {
         panel.add(searchPanel, BorderLayout.PAGE_START);
         panel.add(scrollPane, BorderLayout.CENTER);
 
-        final JTextArea documentPreviewArea = createDocumentPreviewArea();
-        panel.add(documentPreviewArea, BorderLayout.PAGE_END);
+        final JScrollPane scrollPane2 = new JScrollPane(documentPreview, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        scrollPane2.setPreferredSize(new Dimension(560, 100));
+        panel.add(scrollPane2, BorderLayout.PAGE_END);
 
         return panel;
     }
 
-    private JTextArea createSearchResultArea() {
-        final JTextArea searchResultArea = new JTextArea();
-        searchResultArea.setEditable(false);
-        return searchResultArea;
-    }
 
     private JTextArea createDocumentPreviewArea() {
         final JTextArea documentPreviewArea = new JTextArea();
-        documentPreviewArea.setPreferredSize(new Dimension(560, 100));
         documentPreviewArea.setEditable(false);
         return documentPreviewArea;
     }

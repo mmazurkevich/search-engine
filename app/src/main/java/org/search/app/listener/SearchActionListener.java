@@ -1,5 +1,6 @@
 package org.search.app.listener;
 
+import org.search.app.component.JSearchResultTable;
 import org.search.app.worker.SearchWorker;
 import org.search.engine.SearchEngine;
 
@@ -11,17 +12,17 @@ public class SearchActionListener implements ActionListener {
 
     private final SearchEngine searchEngine;
     private final JTextField searchField;
-    private final JTextArea searchResultArea;
+    private final JSearchResultTable searchResultTable;
 
-    public SearchActionListener(SearchEngine searchEngine, JTextField searchField, JTextArea searchResultArea) {
+    public SearchActionListener(SearchEngine searchEngine, JTextField searchField, JSearchResultTable searchResultTable) {
         this.searchEngine = searchEngine;
         this.searchField = searchField;
-        this.searchResultArea = searchResultArea;
+        this.searchResultTable = searchResultTable;
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        SearchWorker worker = new SearchWorker(searchEngine, searchField, searchResultArea);
+        SearchWorker worker = new SearchWorker(searchEngine, searchField, searchResultTable);
         worker.execute();
     }
 }
