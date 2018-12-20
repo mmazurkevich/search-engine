@@ -28,36 +28,45 @@ public class FileSelectionListener implements ListSelectionListener {
         this.painter = new DefaultHighlighter.DefaultHighlightPainter(Color.YELLOW);
     }
 
-
     @Override
     public void valueChanged(ListSelectionEvent e) {
         if (searchResultTable.getSelectedRow() >= 0) {
-            String filePath = tableModel.getValueAt(searchResultTable.getSelectedRow(), 0);
-            int rowNumber = Integer.parseInt(tableModel.getValueAt(searchResultTable.getSelectedRow(), 1));
+            String filePath = getSelectedFile();
+            int rowNumber = getMatchedRow();
             if (previousFile == null || !previousFile.equals(filePath)) {
-                try {
-                    FileReader reader = new FileReader(filePath);
+                try (FileReader reader = new FileReader(filePath)) {
                     documentPreview.read(reader, filePath);
-                    previousFile = filePath;
-                } catch (IOException e1) {
-                    e1.printStackTrace();
+                } catch (IOException ex) {
+                    documentPreview.setText("Exception during loading file");
                 }
+                previousFile = filePath;
             }
             try {
-                if (previousHighlight != null) {
-                    documentPreview.getHighlighter().removeHighlight(previousHighlight);
-                }
-                int startIndex = documentPreview.getLineStartOffset(rowNumber - 1);
-                int endIndex = documentPreview.getLineEndOffset(rowNumber - 1);
-                previousHighlight = documentPreview.getHighlighter().addHighlight(startIndex, endIndex, painter);
-                Rectangle viewRect = documentPreview.modelToView(startIndex);
-                documentPreview.scrollRectToVisible(viewRect);
-            } catch (BadLocationException e1) {
-                e1.printStackTrace();
+                highlightAndScrollRow(rowNumber);
+            } catch (BadLocationException ex) {
+                documentPreview.setText("Exception during highlighting file");
             }
         } else {
             documentPreview.setText("");
         }
+    }
+
+    private String getSelectedFile() {
+        return tableModel.getValueAt(searchResultTable.getSelectedRow(), 0);
+    }
+
+    private int getMatchedRow() {
+        return Integer.parseInt(tableModel.getValueAt(searchResultTable.getSelectedRow(), 1));
+    }
+
+    private void highlightAndScrollRow(int rowNumber) throws BadLocationException {
+        if (previousHighlight != null) {
+            documentPreview.getHighlighter().removeHighlight(previousHighlight);
+        }
+        int startIndex = documentPreview.getLineStartOffset(rowNumber - 1);
+        int endIndex = documentPreview.getLineEndOffset(rowNumber - 1);
+        previousHighlight = documentPreview.getHighlighter().addHighlight(startIndex, endIndex, painter);
+        documentPreview.setCaretPosition(startIndex);
     }
 }
 

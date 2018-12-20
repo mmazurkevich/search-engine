@@ -8,8 +8,6 @@ import org.search.app.model.SearchResultTableModel;
 import org.search.engine.SearchEngine;
 
 import javax.swing.*;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import java.awt.*;
 
 import static javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED;
@@ -26,7 +24,7 @@ class SearchEngineApp extends JFrame {
 
     private void initUI() {
         setTitle("Search Engine App");
-        setSize(600, 400);
+        setSize(800, 600);
         getContentPane().add(createUIPanel());
         createMenuBar();
         setLocationRelativeTo(null);
@@ -95,6 +93,9 @@ class SearchEngineApp extends JFrame {
         SearchResultTableModel tableModel = new SearchResultTableModel();
         final JSearchResultTable searchResultTable = new JSearchResultTable(tableModel);
         searchResultTable.setFillsViewportHeight(true);
+        final JScrollPane documentPreviewScrollPane = new JScrollPane(documentPreview, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        documentPreviewScrollPane.setPreferredSize(new Dimension(0, 150));
+        searchResultTable.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         searchResultTable.getSelectionModel().addListSelectionListener(new FileSelectionListener(tableModel, searchResultTable, documentPreview));
         final JScrollPane scrollPane = new JScrollPane(searchResultTable, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
@@ -108,13 +109,10 @@ class SearchEngineApp extends JFrame {
         panel.add(searchPanel, BorderLayout.PAGE_START);
         panel.add(scrollPane, BorderLayout.CENTER);
 
-        final JScrollPane scrollPane2 = new JScrollPane(documentPreview, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        scrollPane2.setPreferredSize(new Dimension(560, 100));
-        panel.add(scrollPane2, BorderLayout.PAGE_END);
+        panel.add(documentPreviewScrollPane, BorderLayout.PAGE_END);
 
         return panel;
     }
-
 
     private JTextArea createDocumentPreviewArea() {
         final JTextArea documentPreviewArea = new JTextArea();
