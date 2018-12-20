@@ -29,15 +29,17 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
     private final Map<Path, WatchKey> registeredFolders = new ConcurrentHashMap<>();
     // Files which changes tracked by system and were registered in the system by track. CopyOnWriteArrayList
     // used because of possibility of concurrent changes came from watch service and by user itself
-    private final Set<Path> trackedFiles = ConcurrentHashMap.newKeySet();
+    private final Set<Path> trackedFiles;
     // Folders which changes tracked by system and were registered in the system by track.
-    private final Set<Path> trackedFolders = ConcurrentHashMap.newKeySet();
+    private final Set<Path> trackedFolders;
     private final List<FilesystemEventListener> listeners = new ArrayList<>();
     private final WatchService watchService;
     private ScheduledExecutorService notificationExecutor;
 
-    public FilesystemNotificationManager(WatchService watchService) {
+    public FilesystemNotificationManager(WatchService watchService, Set<Path> trackedFiles, Set<Path> trackedFolders) {
         this.watchService = watchService;
+        this.trackedFiles = trackedFiles;
+        this.trackedFolders = trackedFolders;
     }
 
     /**

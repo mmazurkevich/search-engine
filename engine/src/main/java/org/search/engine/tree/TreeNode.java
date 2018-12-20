@@ -3,14 +3,16 @@ package org.search.engine.tree;
 import gnu.trove.set.hash.TIntHashSet;
 import org.search.engine.tree.util.AtomicReferenceArrayList;
 
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
-class TreeNode {
+public class TreeNode implements Serializable {
 
+    private static final long serialVersionUID = 7249096246763128397L;
     private AtomicReferenceArray<TreeNode> outgoingNodes;
     private List<TreeNode> outgoingNodesAsList;
     private final CharSequence charSequence;

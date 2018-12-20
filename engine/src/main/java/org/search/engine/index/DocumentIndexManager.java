@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +30,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
     private static final int QUEUE_CAPACITY = 3_000_000;
 
     //Unique concurrent document Id generator
-    private final AtomicInteger uniqueDocumentId = new AtomicInteger();
+    private final AtomicInteger uniqueDocumentId;
     private final FilesystemNotifier notificationManager;
     private final Map<Path, Document> indexedDocuments;
     private final BlockingQueue<DocumentLine> documentLinesQueue;
@@ -37,14 +38,16 @@ public class DocumentIndexManager implements FilesystemEventListener {
     private final Tokenizer tokenizer;
     private final ExecutorService indexingExecutorService;
     private ScheduledExecutorService indexationExecutor;
+    private final List<IndexationEventListener> listeners = new ArrayList<>();
 
     public DocumentIndexManager(SearchEngineTree index,  Map<Path, Document> indexedDocuments, FilesystemNotifier notificationManager,
-                                Tokenizer tokenizer) {
+                                Tokenizer tokenizer, AtomicInteger uniqueDocumentId) {
         this.notificationManager = notificationManager;
         this.indexedDocuments = indexedDocuments;
         this.documentLinesQueue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
         this.tokenizer = tokenizer;
         this.index = index;
+        this.uniqueDocumentId = uniqueDocumentId;
         this.indexingExecutorService = SearchEngineExecutors.getExecutorService();
         notificationManager.addListener(this);
     }
@@ -115,6 +118,19 @@ public class DocumentIndexManager implements FilesystemEventListener {
                 }
                 break;
         }
+    }
+
+    public void addListener(IndexationEventListener listener) {
+        if (listener != null) {
+            listeners.add(listener);
+        }
+    }
+
+    public boolean removeListener(IndexationEventListener listener) {
+        if (listener != null)
+            return listeners.remove(listener);
+        else
+            return false;
     }
 
     private void indexFolder(Path folderPath) {
@@ -208,7 +224,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
             indexationExecutor = SearchEngineExecutors.getScheduledExecutor();
             int schedulerThreads = SearchEngineExecutors.getSchedulerThreads();
             for (int i= 0; i < schedulerThreads; i++) {
-                IndexationSchedulerTask indexScheduler = new IndexationSchedulerTask(documentLinesQueue, index, tokenizer);
+                IndexationSchedulerTask indexScheduler = new IndexationSchedulerTask(documentLinesQueue, index, tokenizer, listeners);
                 indexationExecutor.scheduleWithFixedDelay(indexScheduler, 0,1, TimeUnit.SECONDS);
             }
         }

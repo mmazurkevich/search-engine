@@ -5,6 +5,7 @@ import org.search.engine.tree.SearchEngineTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
 public class IndexationSchedulerTask implements Runnable {
@@ -14,12 +15,14 @@ public class IndexationSchedulerTask implements Runnable {
     private final BlockingQueue<DocumentLine> documentLinesQueue;
     private final SearchEngineTree index;
     private final Tokenizer tokenizer;
+    private final List<IndexationEventListener> listeners;
     private boolean isFinished;
 
-    IndexationSchedulerTask(BlockingQueue<DocumentLine> documentLinesQueue, SearchEngineTree index, Tokenizer tokenizer) {
+    IndexationSchedulerTask(BlockingQueue<DocumentLine> documentLinesQueue, SearchEngineTree index, Tokenizer tokenizer, List<IndexationEventListener> listeners) {
         this.documentLinesQueue = documentLinesQueue;
         this.index = index;
         this.tokenizer = tokenizer;
+        this.listeners = listeners;
     }
 
     @Override
@@ -35,6 +38,7 @@ public class IndexationSchedulerTask implements Runnable {
         }
         if (isFinished) {
             LOG.info("Indexation finished, queue is empty");
+            listeners.forEach(IndexationEventListener::onIndexationFinished);
             isFinished = false;
         }
     }

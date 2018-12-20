@@ -1,5 +1,6 @@
 package org.search.engine.index;
 
+import java.io.Serializable;
 import java.nio.file.Path;
 
 /**
@@ -8,7 +9,9 @@ import java.nio.file.Path;
  * file itself and to it's parent. Boolean flag if user added this file manually
  * or it was during folder indexation.
  */
-public class Document {
+public class Document implements Serializable {
+
+    private static final long serialVersionUID = 7240996246763128397L;
 
     private int id;
     private boolean tracked;

@@ -31,12 +31,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class SearchEngine {
 
-    private final Map<Path, Document> indexedDocuments = new ConcurrentHashMap<>();
-    private final SearchEngineTree index = new SearchEngineConcurrentTree();
     private final WatchService watchService;
     private final DocumentIndexManager indexManager;
     private final SearchManager searchManager;
     private final FilesystemNotifier filesystemManager;
+    private final SearchEngineInitializer engineInitializer;
 
     public SearchEngine() {
         this(new StandardTokenizer());
@@ -45,11 +44,17 @@ public class SearchEngine {
     public SearchEngine(Tokenizer tokenizer) {
         try {
             watchService = FileSystems.getDefault().newWatchService();
-            filesystemManager = new FilesystemNotificationManager(watchService);
-            indexManager = new DocumentIndexManager(index, indexedDocuments, filesystemManager, tokenizer);
-            searchManager = new SimpleSearchManager(index, indexedDocuments, tokenizer);
+            engineInitializer = new SearchEngineInitializer();
+
+            filesystemManager = new FilesystemNotificationManager(watchService, engineInitializer.getTrackedFiles(),
+                    engineInitializer.getTrackedFolders());
+            searchManager = new SimpleSearchManager(engineInitializer.getIndex(), engineInitializer.getIndexedDocuments(),
+                    tokenizer);
+            indexManager = new DocumentIndexManager(engineInitializer.getIndex(), engineInitializer.getIndexedDocuments(),
+                    filesystemManager, tokenizer, engineInitializer.getUniqueDocumentId());
+            indexManager.addListener(engineInitializer);
         } catch (IOException e) {
-            throw new SearchEngineInitializationException("Can't initialize filesystem WatchService can't track file changes");
+            throw new SearchEngineInitializationException("Can't initialize filesystem WatchService or can't create app system folder");
         }
     }
 

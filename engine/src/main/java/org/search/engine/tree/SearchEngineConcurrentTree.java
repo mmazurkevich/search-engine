@@ -4,6 +4,7 @@ import gnu.trove.set.hash.TIntHashSet;
 import org.search.engine.tree.util.CharSequencesUtil;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -18,14 +19,19 @@ import java.util.stream.Collectors;
  * don't reduce performans by using tree and use less memory. This class can be improved
  * by using partial locks for the each branch of tree.
  */
-public class SearchEngineConcurrentTree implements SearchEngineTree {
+public class SearchEngineConcurrentTree implements SearchEngineTree, Serializable {
 
+    private static final long serialVersionUID = 7249096246763182397L;
     // Lock for modification operations
     private final Lock writeLock = new ReentrantLock();
     private volatile TreeNode root;
 
     public SearchEngineConcurrentTree() {
         this.root = createNode("", null, null, Collections.emptyList(), true);
+    }
+
+    public TreeNode getRoot() {
+        return root;
     }
 
     /**
