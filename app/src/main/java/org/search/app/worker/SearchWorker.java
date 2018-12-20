@@ -31,10 +31,9 @@ public class SearchWorker extends SwingWorker<List<RowFile>, Void> {
     protected List<RowFile> doInBackground() {
         return searchEngine.search(searchField.getText()).stream().map(it -> {
             List<RowFile> fileRows = new ArrayList<>();
-            fileRows.add(new RowFile(it, 10));
-//            for (int row: it.getRowNumbers()) {
-//                fileRows.add(new RowFile(it.getFilePath(), row));
-//            }
+            for (int row: it.getRowNumbers()) {
+                fileRows.add(new RowFile(it.getFileName(), row));
+            }
             return fileRows;
         }).flatMap(List::stream).collect(Collectors.toList());
     }

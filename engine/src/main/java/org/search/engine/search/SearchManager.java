@@ -13,5 +13,5 @@ public interface SearchManager {
      * @param searchQuery Search query which should be searched in the index
      * @return list of matched entities
      */
-    List<String> searchByQuery(String searchQuery);
+    List<SearchResult> searchByQuery(String searchQuery);
 }

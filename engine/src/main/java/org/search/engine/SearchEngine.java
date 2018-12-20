@@ -8,6 +8,7 @@ import org.search.engine.filesystem.FilesystemNotifier;
 import org.search.engine.index.Document;
 import org.search.engine.index.DocumentIndexManager;
 import org.search.engine.search.SearchManager;
+import org.search.engine.search.SearchResult;
 import org.search.engine.search.SimpleSearchManager;
 import org.search.engine.tree.SearchEngineConcurrentTree;
 import org.search.engine.tree.SearchEngineTree;
@@ -46,7 +47,7 @@ public class SearchEngine {
             watchService = FileSystems.getDefault().newWatchService();
             filesystemManager = new FilesystemNotificationManager(watchService);
             indexManager = new DocumentIndexManager(index, indexedDocuments, filesystemManager, tokenizer);
-            searchManager = new SimpleSearchManager(index, indexedDocuments);
+            searchManager = new SimpleSearchManager(index, indexedDocuments, tokenizer);
         } catch (IOException e) {
             throw new SearchEngineInitializationException("Can't initialize filesystem WatchService can't track file changes");
         }
@@ -76,7 +77,7 @@ public class SearchEngine {
      * @param searchQuery The query which should be searched in the index
      * @return The list of documents which contains the searched lexeme
      */
-    public List<String> search(String searchQuery) {
+    public List<SearchResult> search(String searchQuery) {
         return searchManager.searchByQuery(searchQuery);
     }
 
