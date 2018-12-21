@@ -5,21 +5,15 @@ import org.search.engine.analyzer.Tokenizer;
 import org.search.engine.exception.SearchEngineInitializationException;
 import org.search.engine.filesystem.FilesystemNotificationManager;
 import org.search.engine.filesystem.FilesystemNotifier;
-import org.search.engine.index.Document;
 import org.search.engine.index.DocumentIndexManager;
 import org.search.engine.search.SearchManager;
-import org.search.engine.search.SearchResult;
+import org.search.engine.model.SearchResult;
 import org.search.engine.search.SimpleSearchManager;
-import org.search.engine.tree.SearchEngineConcurrentTree;
-import org.search.engine.tree.SearchEngineTree;
 
 import java.io.IOException;
 import java.nio.file.FileSystems;
-import java.nio.file.Path;
 import java.nio.file.WatchService;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The main class of the library for in-memory documents/folders indexation.

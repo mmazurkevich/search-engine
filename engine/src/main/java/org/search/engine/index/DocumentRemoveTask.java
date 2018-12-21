@@ -1,12 +1,12 @@
 package org.search.engine.index;
 
 import org.search.engine.filesystem.FilesystemNotifier;
+import org.search.engine.model.Document;
 import org.search.engine.tree.SearchEngineTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 

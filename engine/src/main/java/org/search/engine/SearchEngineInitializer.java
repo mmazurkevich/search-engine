@@ -1,26 +1,20 @@
 package org.search.engine;
 
 import org.nustaq.serialization.FSTConfiguration;
-import org.nustaq.serialization.FSTObjectOutput;
-import org.search.engine.index.Document;
 import org.search.engine.index.IndexationEventListener;
+import org.search.engine.model.Document;
+import org.search.engine.model.SerializableDocument;
 import org.search.engine.tree.SearchEngineConcurrentTree;
 import org.search.engine.tree.SearchEngineTree;
 import org.search.engine.tree.TreeNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -53,7 +47,7 @@ public class SearchEngineInitializer implements IndexationEventListener {
         if (!Files.exists(folderPath)) {
             Files.createDirectory(folderPath);
         }
-        config.registerClass(TreeNode.class, String.class, AtomicInteger.class, ConcurrentHashMap.class);
+        config.registerClass(TreeNode.class, String.class, AtomicInteger.class, HashMap.class);
         if (!initializeTrackedFiles() || !initializeTrackedFolders() || !initializeIndex()
                 || !initializeIndexedDocuments() || !initializeDocumentId()) {
             uniqueDocumentId = new AtomicInteger();
@@ -95,11 +89,13 @@ public class SearchEngineInitializer implements IndexationEventListener {
         if (Files.exists(filePath)) {
             try {
                 byte[] fileBytes = Files.readAllBytes(filePath);
-                trackedFiles = (ConcurrentHashMap.KeySetView) config.asObject(fileBytes);
-                LOG.info("Tracked files loaded from file");
+                List<String> paths = (ArrayList<String>) config.asObject(fileBytes);
+                trackedFiles = ConcurrentHashMap.newKeySet();
+                paths.forEach(it -> trackedFiles.add(Paths.get(it)));
+                LOG.info("TrackedFiles loaded from file");
                 return true;
             } catch (IOException | ClassCastException e) {
-                LOG.warn("Can't read tracked files from file");
+                LOG.warn("Can't read tracked files from file", e);
                 return false;
             }
         }
@@ -111,11 +107,13 @@ public class SearchEngineInitializer implements IndexationEventListener {
         if (Files.exists(filePath)) {
             try {
                 byte[] fileBytes = Files.readAllBytes(filePath);
-                trackedFolders = (ConcurrentHashMap.KeySetView) config.asObject(fileBytes);
-                LOG.info("Tracked folders loaded from file");
+                List<String> paths = (ArrayList<String>) config.asObject(fileBytes);
+                trackedFolders = ConcurrentHashMap.newKeySet();
+                paths.forEach(it -> trackedFolders.add(Paths.get(it)));
+                LOG.info("TrackedFolders loaded from file");
                 return true;
             } catch (IOException | ClassCastException e) {
-                LOG.warn("Can't read tracked folders from file");
+                LOG.warn("Can't read tracked folders from file", e);
                 return false;
             }
         }
@@ -127,11 +125,12 @@ public class SearchEngineInitializer implements IndexationEventListener {
         if (Files.exists(filePath)) {
             try {
                 byte[] fileBytes = Files.readAllBytes(filePath);
-                index = (SearchEngineConcurrentTree) config.asObject(fileBytes);
+                TreeNode root = (TreeNode) config.asObject(fileBytes);
+                index = new SearchEngineConcurrentTree(root);
                 LOG.info("Index loaded from file");
                 return true;
             } catch (IOException | ClassCastException e) {
-                LOG.warn("Can't read index from file");
+                LOG.warn("Can't read index from file", e);
                 return false;
             }
         }
@@ -143,11 +142,16 @@ public class SearchEngineInitializer implements IndexationEventListener {
         if (Files.exists(filePath)) {
             try {
                 byte[] fileBytes = Files.readAllBytes(filePath);
-                indexedDocuments = (ConcurrentHashMap) config.asObject(fileBytes);
-                LOG.info("Indexed documents loaded from file");
+                Map<String, SerializableDocument> documents = (HashMap<String, SerializableDocument>) config.asObject(fileBytes);
+                indexedDocuments = new ConcurrentHashMap<>();
+                documents.forEach((key, document) -> {
+                    Path path = Paths.get(key);
+                    indexedDocuments.put(path, new Document(document.getId(), document.isTracked(), path));
+                });
+                LOG.info("IndexedDocuments loaded from file");
                 return true;
             } catch (IOException | ClassCastException e) {
-                LOG.warn("Can't read indexed documents from file");
+                LOG.warn("Can't read indexedDocuments from file", e);
                 return false;
             }
         }
@@ -160,10 +164,10 @@ public class SearchEngineInitializer implements IndexationEventListener {
             try {
                 byte[] fileBytes = Files.readAllBytes(filePath);
                 uniqueDocumentId = (AtomicInteger) config.asObject(fileBytes);
-                LOG.info("Unique document's id loaded from file");
+                LOG.info("UniqueDocumentId loaded from file");
                 return true;
             } catch (IOException | ClassCastException e) {
-                LOG.warn("Can't read unique document's id from file");
+                LOG.warn("Can't read unique document's id from file", e);
                 return false;
             }
         }
@@ -187,7 +191,7 @@ public class SearchEngineInitializer implements IndexationEventListener {
             );
             Files.write(filePath, objectBytes);
         } catch (IOException e) {
-            LOG.warn("Can't save tracked files state");
+            LOG.warn("Can't save tracked files state", e);
         }
     }
 
@@ -200,24 +204,15 @@ public class SearchEngineInitializer implements IndexationEventListener {
             );
             Files.write(filePath, objectBytes);
         } catch (IOException e) {
-            LOG.warn("Can't save tracked folders state");
+            LOG.warn("Can't save tracked folders state", e);
         }
     }
 
     private void saveIndex() {
         try {
             Path filePath = Paths.get(APP_FOLDER + INDEX_FILE);
-            FileOutputStream file = new FileOutputStream(APP_FOLDER + INDEX_FILE);
-            ObjectOutputStream out = new ObjectOutputStream(file);
-
-            // Method for serialization of object
-            out.writeObject(index.getRoot());
-
-            out.close();
-            file.close();
-            //TODO:: rewrite
-//            byte[] objectBytes = config.asByteArray(index.getRoot());
-//            Files.write(filePath, objectBytes);
+            byte[] objectBytes = config.asByteArray(index.getRoot());
+            Files.write(filePath, objectBytes);
         } catch (IOException e) {
             LOG.warn("Can't save index state", e);
         }
@@ -226,10 +221,15 @@ public class SearchEngineInitializer implements IndexationEventListener {
     private void saveIndexedDocuments() {
         try {
             Path filePath = Paths.get(APP_FOLDER + INDEXED_DOCUMENTS_FILE);
-            byte[] objectBytes = config.asByteArray(indexedDocuments);
+            byte[] objectBytes = config.asByteArray(indexedDocuments.entrySet().stream()
+                    .collect(Collectors.toMap(e -> e.getKey().toAbsolutePath().toString(),
+                            e -> {
+                                Document document = e.getValue();
+                                return new SerializableDocument(document.getId(), document.isTracked(), document.getPath().toAbsolutePath().toString());
+                            })));
             Files.write(filePath, objectBytes);
         } catch (IOException e) {
-            LOG.warn("Can't save indexed documents state");
+            LOG.warn("Can't save indexed documents state", e);
         }
     }
 

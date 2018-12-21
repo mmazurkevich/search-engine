@@ -6,6 +6,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.search.engine.analyzer.StandardTokenizer;
 import org.search.engine.filesystem.FilesystemNotifier;
+import org.search.engine.model.Document;
 import org.search.engine.tree.SearchEngineConcurrentTree;
 
 import java.net.URISyntaxException;
@@ -14,7 +15,6 @@ import java.nio.file.Paths;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.junit.Assert.assertEquals;

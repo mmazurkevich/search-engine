@@ -1,5 +1,7 @@
 package org.search.engine.search;
 
+import org.search.engine.model.SearchResult;
+
 import java.util.List;
 
 /**

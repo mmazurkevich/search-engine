@@ -1,7 +1,8 @@
 package org.search.engine.search;
 
 import org.search.engine.analyzer.Tokenizer;
-import org.search.engine.index.Document;
+import org.search.engine.model.Document;
+import org.search.engine.model.SearchResult;
 import org.search.engine.tree.SearchEngineTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

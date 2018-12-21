@@ -1,4 +1,4 @@
-package org.search.engine.index;
+package org.search.engine.model;
 
 import java.io.Serializable;
 import java.nio.file.Path;

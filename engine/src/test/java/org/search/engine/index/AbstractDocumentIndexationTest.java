@@ -1,9 +1,9 @@
 package org.search.engine.index;
 
+import org.search.engine.model.Document;
 import org.search.engine.tree.SearchEngineTree;
 
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Map;
 
 abstract class AbstractDocumentIndexationTest {

@@ -6,6 +6,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.search.engine.analyzer.StandardTokenizer;
 import org.search.engine.filesystem.FilesystemNotifier;
+import org.search.engine.model.Document;
 import org.search.engine.tree.SearchEngineConcurrentTree;
 
 import java.net.URISyntaxException;

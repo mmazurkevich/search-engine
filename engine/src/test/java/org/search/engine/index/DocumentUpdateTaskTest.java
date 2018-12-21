@@ -5,6 +5,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.search.engine.analyzer.StandardTokenizer;
 import org.search.engine.analyzer.Tokenizer;
+import org.search.engine.model.Document;
 import org.search.engine.tree.SearchEngineConcurrentTree;
 
 import java.io.IOException;
@@ -17,7 +18,6 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.junit.Assert.assertEquals;
