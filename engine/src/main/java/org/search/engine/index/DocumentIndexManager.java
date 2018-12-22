@@ -6,6 +6,7 @@ import org.search.engine.filesystem.FilesystemEvent;
 import org.search.engine.filesystem.FilesystemEventListener;
 import org.search.engine.filesystem.FilesystemNotifier;
 import org.search.engine.model.Document;
+import org.search.engine.model.IndexChanges;
 import org.search.engine.tree.SearchEngineTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,8 +41,8 @@ public class DocumentIndexManager implements FilesystemEventListener {
     private ScheduledExecutorService indexationExecutor;
     private final List<IndexationEventListener> listeners = new ArrayList<>();
 
-    public DocumentIndexManager(SearchEngineTree index,  Map<Path, Document> indexedDocuments, FilesystemNotifier notificationManager,
-                                Tokenizer tokenizer, AtomicInteger uniqueDocumentId) {
+    public DocumentIndexManager(SearchEngineTree index, Map<Path, Document> indexedDocuments, FilesystemNotifier notificationManager,
+                                Tokenizer tokenizer, AtomicInteger uniqueDocumentId, IndexChanges indexChanges) {
         this.notificationManager = notificationManager;
         this.indexedDocuments = indexedDocuments;
         this.documentLinesQueue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
@@ -49,6 +50,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
         this.index = index;
         this.uniqueDocumentId = uniqueDocumentId;
         this.indexingExecutorService = SearchEngineExecutors.getExecutorService();
+        applyIndexChangesIfNeeded(indexChanges);
         notificationManager.addListener(this);
     }
 
@@ -133,6 +135,17 @@ public class DocumentIndexManager implements FilesystemEventListener {
             return false;
     }
 
+    private void applyIndexChangesIfNeeded(IndexChanges indexChanges) {
+        if (indexChanges != null) {
+            indexChanges.getNewFiles().forEach(file -> onFileChanged(FilesystemEvent.CREATED, file));
+            indexChanges.getChangedFiles().forEach(file -> onFileChanged(FilesystemEvent.MODIFIED, file));
+            indexChanges.getOldFiles().forEach(file -> onFileChanged(FilesystemEvent.DELETED, file));
+
+            indexChanges.getNewFolders().forEach(folder -> onFolderChanged(FilesystemEvent.CREATED, folder));
+            indexChanges.getOldFolders().forEach(folder -> onFolderChanged(FilesystemEvent.DELETED, folder));
+        }
+    }
+
     private void indexFolder(Path folderPath) {
         try {
             //Check that folder is registered and should not be indexed again (not a clean solution)
@@ -166,7 +179,8 @@ public class DocumentIndexManager implements FilesystemEventListener {
     private void indexFile(Path filePath, boolean shouldTrack) {
         try {
             if (hasAccess(filePath) && !isFileIndexed(filePath)) {
-                Document document = new Document(uniqueDocumentId.incrementAndGet(), shouldTrack, filePath);
+                Document document = new Document(uniqueDocumentId.incrementAndGet(), shouldTrack, filePath,
+                        Files.getLastModifiedTime(filePath).toMillis());
                 DocumentReadTask task = new DocumentReadTask(document, indexedDocuments, documentLinesQueue, notificationManager);
                 indexingExecutorService.execute(task);
                 scheduleIndexationIfNeeded();

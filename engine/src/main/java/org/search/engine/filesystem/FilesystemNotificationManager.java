@@ -40,6 +40,7 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         this.watchService = watchService;
         this.trackedFiles = trackedFiles;
         this.trackedFolders = trackedFolders;
+        applyIndexChangesIfNeeded();
     }
 
     /**
@@ -211,6 +212,25 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
             return listeners.remove(listener);
         else
             return false;
+    }
+
+    private void applyIndexChangesIfNeeded() {
+        trackedFiles.forEach(file -> {
+            Path parentFolder = file.getParent();
+            if (parentFolder != null) {
+                //For tracking that tracked file can be deleted
+                registerFolder(parentFolder, false);
+            }
+        });
+
+        trackedFolders.forEach(folder -> {
+            registerFolder(folder, false);
+            Path parentFolder = folder.getParent();
+            if (parentFolder != null && !trackedFolders.contains(parentFolder)) {
+                //For tracking that tracked folder itself can be deleted
+                registerFolder(folder.getParent(), false);
+            }
+        });
     }
 
     private boolean registerFolder(Path folderPath, boolean shouldTrack) {

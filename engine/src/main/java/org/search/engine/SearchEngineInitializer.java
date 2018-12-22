@@ -3,6 +3,7 @@ package org.search.engine;
 import org.nustaq.serialization.FSTConfiguration;
 import org.search.engine.index.IndexationEventListener;
 import org.search.engine.model.Document;
+import org.search.engine.model.IndexChanges;
 import org.search.engine.model.SerializableDocument;
 import org.search.engine.tree.SearchEngineConcurrentTree;
 import org.search.engine.tree.SearchEngineTree;
@@ -18,6 +19,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class SearchEngineInitializer implements IndexationEventListener {
 
@@ -29,7 +31,6 @@ public class SearchEngineInitializer implements IndexationEventListener {
     private static final String TRACKED_FOLDERS_FILE = "/folders.se";
     private static final String INDEX_FILE = "/index.se";
     private static final String INDEXED_DOCUMENTS_FILE = "/documents.se";
-    private static final String DOCUMENT_ID_FILE = "/id.se";
 
     //Unique concurrent document Id generator
     private AtomicInteger uniqueDocumentId;
@@ -40,6 +41,7 @@ public class SearchEngineInitializer implements IndexationEventListener {
     private Set<Path> trackedFiles;
     // Folders which changes tracked by system and were registered in the system by track.
     private Set<Path> trackedFolders;
+    private IndexChanges indexChanges;
 
 
     SearchEngineInitializer() throws IOException {
@@ -49,19 +51,23 @@ public class SearchEngineInitializer implements IndexationEventListener {
         }
         config.registerClass(TreeNode.class, String.class, AtomicInteger.class, HashMap.class);
         if (!initializeTrackedFiles() || !initializeTrackedFolders() || !initializeIndex()
-                || !initializeIndexedDocuments() || !initializeDocumentId()) {
+                || !initializeIndexedDocuments()) {
             uniqueDocumentId = new AtomicInteger();
             indexedDocuments = new ConcurrentHashMap<>();
             index = new SearchEngineConcurrentTree();
             trackedFiles = ConcurrentHashMap.newKeySet();
             trackedFolders = ConcurrentHashMap.newKeySet();
             LOG.info("Initialized empty engine");
+        } else {
+            calculateIndexChanges();
+            LOG.info("Engine loaded from cache");
         }
     }
 
     @Override
     public void onIndexationFinished() {
         saveEngineState();
+        LOG.info("Search engine saving cache finished");
     }
 
     AtomicInteger getUniqueDocumentId() {
@@ -82,6 +88,77 @@ public class SearchEngineInitializer implements IndexationEventListener {
 
     Set<Path> getTrackedFolders() {
         return trackedFolders;
+    }
+
+    IndexChanges getIndexChanges() {
+        return indexChanges;
+    }
+
+    private void calculateIndexChanges() {
+        Set<Path> oldFolders = new HashSet<>();
+        Set<Path> newFolders = new HashSet<>();
+
+        Set<Path> checkedFiles = new HashSet<>();
+        Set<Path> newFiles = new HashSet<>();
+        Set<Path> oldFiles = new HashSet<>();
+        Set<Path> changedFiles = new HashSet<>();
+
+        trackedFiles.forEach(file -> {
+            if (!Files.exists(file)) {
+                oldFiles.add(file);
+            } else {
+                try {
+                    checkedFiles.add(file);
+                    Document document = indexedDocuments.get(file);
+                    if (document != null && Files.getLastModifiedTime(file).toMillis() > document.getModificationTimestamp()) {
+                        changedFiles.add(file);
+                    }
+                } catch (IOException ex) {
+                    LOG.warn("Exception in calculation file changes: {}", file, ex);
+                }
+            }
+        });
+
+
+        trackedFolders.forEach(folder -> {
+            if (!Files.exists(folder)) {
+                oldFolders.add(folder);
+            } else {
+                try (Stream<Path> paths = Files.walk(folder)) {
+                    paths.forEach(path -> {
+                        if (Files.isRegularFile(path)) {
+                            checkedFiles.add(path);
+
+                            Document document = indexedDocuments.get(path);
+                            if (document != null) {
+                                try {
+                                    if (Files.getLastModifiedTime(path).toMillis() > document.getModificationTimestamp()) {
+                                        changedFiles.add(path);
+                                    }
+                                } catch (IOException ex) {
+                                    LOG.warn("Exception in calculation file changes: {}", path, ex);
+                                }
+                            } else {
+                                newFiles.add(path);
+                            }
+
+                        }
+                        if (Files.isDirectory(path)) {
+                            if (!trackedFolders.contains(path)) {
+                                newFolders.add(path);
+                            }
+                        }
+                    });
+                } catch (IOException ex) {
+                    LOG.warn("Exception in walking through the folder", ex);
+                }
+            }
+        });
+
+        Set<Path> indexedFiles = new HashSet<>(indexedDocuments.keySet());
+        indexedFiles.removeAll(checkedFiles);
+        oldFiles.addAll(indexedFiles);
+        indexChanges = new IndexChanges(oldFolders, newFolders, newFiles, oldFiles, changedFiles);
     }
 
     private boolean initializeTrackedFiles() {
@@ -144,30 +221,21 @@ public class SearchEngineInitializer implements IndexationEventListener {
                 byte[] fileBytes = Files.readAllBytes(filePath);
                 Map<String, SerializableDocument> documents = (HashMap<String, SerializableDocument>) config.asObject(fileBytes);
                 indexedDocuments = new ConcurrentHashMap<>();
-                documents.forEach((key, document) -> {
-                    Path path = Paths.get(key);
-                    indexedDocuments.put(path, new Document(document.getId(), document.isTracked(), path));
-                });
+
+                int maxId = 0;
+                for (Map.Entry<String, SerializableDocument> entry : documents.entrySet()) {
+                    SerializableDocument document = entry.getValue();
+                    Path path = Paths.get(entry.getKey());
+                    indexedDocuments.put(path, new Document(document.getId(), document.isTracked(), path, document.getModificationTimestamp()));
+                    if (document.getId() > maxId) {
+                        maxId = document.getId();
+                    }
+                }
+                uniqueDocumentId = new AtomicInteger(maxId);
                 LOG.info("IndexedDocuments loaded from file");
                 return true;
             } catch (IOException | ClassCastException e) {
                 LOG.warn("Can't read indexedDocuments from file", e);
-                return false;
-            }
-        }
-        return false;
-    }
-
-    private boolean initializeDocumentId() {
-        Path filePath = Paths.get(APP_FOLDER + DOCUMENT_ID_FILE);
-        if (Files.exists(filePath)) {
-            try {
-                byte[] fileBytes = Files.readAllBytes(filePath);
-                uniqueDocumentId = (AtomicInteger) config.asObject(fileBytes);
-                LOG.info("UniqueDocumentId loaded from file");
-                return true;
-            } catch (IOException | ClassCastException e) {
-                LOG.warn("Can't read unique document's id from file", e);
                 return false;
             }
         }
@@ -179,7 +247,6 @@ public class SearchEngineInitializer implements IndexationEventListener {
         saveTrackedFolders();
         saveIndex();
         saveIndexedDocuments();
-        saveDocumentId();
     }
 
     private void saveTrackedFiles() {
@@ -225,7 +292,8 @@ public class SearchEngineInitializer implements IndexationEventListener {
                     .collect(Collectors.toMap(e -> e.getKey().toAbsolutePath().toString(),
                             e -> {
                                 Document document = e.getValue();
-                                return new SerializableDocument(document.getId(), document.isTracked(), document.getPath().toAbsolutePath().toString());
+                                return new SerializableDocument(document.getId(), document.isTracked(),
+                                        document.getPath().toAbsolutePath().toString(), document.getModificationTimestamp());
                             })));
             Files.write(filePath, objectBytes);
         } catch (IOException e) {
@@ -233,13 +301,4 @@ public class SearchEngineInitializer implements IndexationEventListener {
         }
     }
 
-    private void saveDocumentId() {
-        try {
-            Path filePath = Paths.get(APP_FOLDER + DOCUMENT_ID_FILE);
-            byte[] objectBytes = config.asByteArray(uniqueDocumentId);
-            Files.write(filePath, objectBytes);
-        } catch (IOException e) {
-            LOG.warn("Can't save document's id state");
-        }
-    }
 }

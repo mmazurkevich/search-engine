@@ -44,6 +44,7 @@ public class SimpleSearchManager implements SearchManager{
             if (!value.isEmpty()) {
                 List<SearchResult> results = indexedDocuments.entrySet().stream()
                         .filter(entry -> value.contains(entry.getValue().getId()))
+                        .filter(entry -> Files.exists(entry.getValue().getPath()))
                         .map(entry -> {
                             Path filePath = entry.getValue().getPath();
                             int[] rowNumber = {0};

@@ -17,12 +17,14 @@ public class Document implements Serializable {
     private boolean tracked;
     private Path path;
     private Path parent;
+    private long modificationTimestamp;
 
-    public Document(int id, boolean tracked, Path path) {
+    public Document(int id, boolean tracked, Path path, long modificationTimestamp) {
         this.id = id;
         this.tracked = tracked;
         this.path = path;
         this.parent = path.getParent();
+        this.modificationTimestamp = modificationTimestamp;
     }
 
     public int getId() {
@@ -39,5 +41,9 @@ public class Document implements Serializable {
 
     public Path getParent() {
         return parent;
+    }
+
+    public long getModificationTimestamp() {
+        return modificationTimestamp;
     }
 }

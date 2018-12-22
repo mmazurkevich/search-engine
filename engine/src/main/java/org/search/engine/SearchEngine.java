@@ -45,7 +45,7 @@ public class SearchEngine {
             searchManager = new SimpleSearchManager(engineInitializer.getIndex(), engineInitializer.getIndexedDocuments(),
                     tokenizer);
             indexManager = new DocumentIndexManager(engineInitializer.getIndex(), engineInitializer.getIndexedDocuments(),
-                    filesystemManager, tokenizer, engineInitializer.getUniqueDocumentId());
+                    filesystemManager, tokenizer, engineInitializer.getUniqueDocumentId(), engineInitializer.getIndexChanges());
             indexManager.addListener(engineInitializer);
         } catch (IOException e) {
             throw new SearchEngineInitializationException("Can't initialize filesystem WatchService or can't create app system folder");
