@@ -8,6 +8,7 @@ import org.search.app.model.SearchResultTableModel;
 import org.search.engine.SearchEngine;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import java.awt.*;
 import java.util.Collections;
 
@@ -20,9 +21,12 @@ class SearchEngineApp extends JFrame {
 
     //UI components
     private JButton searchButton;
+    private JButton cancelButton;
     private JTextField searchField;
     private JTextArea documentPreview;
     private JSearchResultTable searchResultTable;
+    private JDialog progressDialog;
+    private JProgressBar progressBar;
 
     SearchEngineApp() {
         this.searchEngine = new SearchEngine();
@@ -42,6 +46,7 @@ class SearchEngineApp extends JFrame {
         setTitle("Search Engine App");
         setSize(800, 600);
         getContentPane().add(createUIPanel());
+        createProgressDialog();
         createMenuBar();
         setLocationRelativeTo(null);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -64,6 +69,7 @@ class SearchEngineApp extends JFrame {
                     @Override
                     protected Void doInBackground() {
                         searchEngine.indexFolder(chooser.getSelectedFile().getPath());
+                        progressDialog.setVisible(true);
                         return null;
                     }
                 };
@@ -115,6 +121,7 @@ class SearchEngineApp extends JFrame {
         panel.setBorder(BorderFactory.createEmptyBorder(5, 10, 10, 10));
 
         searchButton = new JButton("Search");
+        cancelButton = new JButton("Cancel");
         searchField = new JTextField();
         documentPreview = createDocumentPreviewArea();
 
@@ -140,6 +147,29 @@ class SearchEngineApp extends JFrame {
         panel.add(documentPreviewScrollPane, BorderLayout.PAGE_END);
 
         return panel;
+    }
+
+    private void createProgressDialog() {
+        //Creating progress bar
+        progressBar = new JProgressBar();
+        progressBar.setValue(25);
+        progressBar.setStringPainted(true);
+        Border border = BorderFactory.createTitledBorder("Indexing...");
+        progressBar.setBorder(border);
+        ((JPanel)progressDialog.getContentPane())
+                .setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        //Creating cancel button and align center of dialog
+        JPanel cancelPanel = new JPanel(new FlowLayout());
+        cancelPanel.add(cancelButton);
+
+        //Creating progress dialog
+        progressDialog = new JDialog(this, false);
+        progressDialog.add(BorderLayout.PAGE_START, progressBar);
+        progressDialog.add(BorderLayout.PAGE_END, cancelPanel);
+        progressDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+        progressDialog.setSize(300, 140);
+        progressDialog.setLocationRelativeTo(this);
     }
 
     private JTextArea createDocumentPreviewArea() {
