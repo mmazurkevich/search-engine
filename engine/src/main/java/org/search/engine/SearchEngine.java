@@ -9,10 +9,13 @@ import org.search.engine.index.DocumentIndexManager;
 import org.search.engine.search.SearchManager;
 import org.search.engine.model.SearchResult;
 import org.search.engine.search.SimpleSearchManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.WatchService;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -25,11 +28,14 @@ import java.util.List;
  */
 public class SearchEngine {
 
+    private static final Logger LOG = LoggerFactory.getLogger(SearchEngine.class);
+
     private final WatchService watchService;
-    private final DocumentIndexManager indexManager;
-    private final SearchManager searchManager;
-    private final FilesystemNotifier filesystemManager;
-    private final SearchEngineInitializer engineInitializer;
+    private final Tokenizer tokenizer;
+    private DocumentIndexManager indexManager;
+    private SearchManager searchManager;
+    private FilesystemNotifier filesystemManager;
+    private SearchEngineInitializer engineInitializer;
 
     public SearchEngine() {
         this(new StandardTokenizer());
@@ -38,18 +44,22 @@ public class SearchEngine {
     public SearchEngine(Tokenizer tokenizer) {
         try {
             watchService = FileSystems.getDefault().newWatchService();
-            engineInitializer = new SearchEngineInitializer();
-
-            filesystemManager = new FilesystemNotificationManager(watchService, engineInitializer.getTrackedFiles(),
-                    engineInitializer.getTrackedFolders());
-            searchManager = new SimpleSearchManager(engineInitializer.getIndex(), engineInitializer.getIndexedDocuments(),
-                    tokenizer);
-            indexManager = new DocumentIndexManager(engineInitializer.getIndex(), engineInitializer.getIndexedDocuments(),
-                    filesystemManager, tokenizer, engineInitializer.getUniqueDocumentId(), engineInitializer.getIndexChanges());
-            indexManager.addListener(engineInitializer);
+            this.tokenizer = tokenizer;
         } catch (IOException e) {
             throw new SearchEngineInitializationException("Can't initialize filesystem WatchService or can't create app system folder");
         }
+    }
+
+    public void initialize() {
+        engineInitializer = new SearchEngineInitializer();
+
+        filesystemManager = new FilesystemNotificationManager(watchService, engineInitializer.getTrackedFiles(),
+                engineInitializer.getTrackedFolders());
+        searchManager = new SimpleSearchManager(engineInitializer.getIndex(), engineInitializer.getIndexedDocuments(),
+                tokenizer);
+        indexManager = new DocumentIndexManager(engineInitializer.getIndex(), engineInitializer.getIndexedDocuments(),
+                filesystemManager, tokenizer, engineInitializer.getUniqueDocumentId(), engineInitializer.getIndexChanges());
+        indexManager.addListener(engineInitializer);
     }
 
     /**
@@ -58,7 +68,11 @@ public class SearchEngine {
      * @param path The path to the indexing folder
      */
     public void indexFolder(String path) {
-        indexManager.indexFolder(path);
+        if (indexManager != null) {
+            indexManager.indexFolder(path);
+        } else {
+            LOG.warn("Search engine not yet initialized");
+        }
     }
 
     /**
@@ -67,7 +81,11 @@ public class SearchEngine {
      * @param path The path to the indexing document
      */
     public void indexFile(String path) {
-        indexManager.indexFile(path);
+        if (indexManager != null) {
+            indexManager.indexFile(path);
+        } else {
+            LOG.warn("Search engine not yet initialized");
+        }
     }
 
     /**
@@ -77,7 +95,22 @@ public class SearchEngine {
      * @return The list of documents which contains the searched lexeme
      */
     public List<SearchResult> search(String searchQuery) {
-        return searchManager.searchByQuery(searchQuery);
+        if (searchManager != null) {
+            return searchManager.searchByQuery(searchQuery);
+        } else {
+            LOG.warn("Search engine not yet initialized");
+            return Collections.emptyList();
+        }
+    }
+
+    public void invalidateCache() {
+        if (filesystemManager != null && indexManager != null && engineInitializer != null) {
+            filesystemManager.invalidateCache();
+            indexManager.invalidateCache();
+            engineInitializer.invalidateCache();
+        } else {
+            LOG.warn("Search engine not yet initialized");
+        }
     }
 
     @Override

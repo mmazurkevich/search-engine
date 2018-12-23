@@ -214,6 +214,15 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
             return false;
     }
 
+    @Override
+    public void invalidateCache() {
+        trackedFiles.clear();
+        trackedFolders.clear();
+        registeredFolders.forEach((key, value) -> value.cancel());
+        registeredFolders.clear();
+        LOG.info("Cache invalidated");
+    }
+
     private void applyIndexChangesIfNeeded() {
         trackedFiles.forEach(file -> {
             Path parentFolder = file.getParent();

@@ -2,7 +2,6 @@ package org.search.app.worker;
 
 import org.search.app.component.JSearchResultTable;
 import org.search.app.model.RowFile;
-import org.search.app.model.SearchResultTableModel;
 import org.search.engine.SearchEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

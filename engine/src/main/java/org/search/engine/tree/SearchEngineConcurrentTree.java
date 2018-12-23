@@ -252,6 +252,11 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
     }
 
     @Override
+    public void clear() {
+        root = createNode("", null, null, Collections.emptyList(), true);
+    }
+
+    @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
         prettyPrint(root, sb, "", true, true);

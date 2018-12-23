@@ -135,6 +135,13 @@ public class DocumentIndexManager implements FilesystemEventListener {
             return false;
     }
 
+    public void invalidateCache() {
+        uniqueDocumentId.set(0);
+        indexedDocuments.clear();
+        index.clear();
+        LOG.info("Cache invalidated");
+    }
+
     private void applyIndexChangesIfNeeded(IndexChanges indexChanges) {
         if (indexChanges != null) {
             indexChanges.getNewFiles().forEach(file -> onFileChanged(FilesystemEvent.CREATED, file));

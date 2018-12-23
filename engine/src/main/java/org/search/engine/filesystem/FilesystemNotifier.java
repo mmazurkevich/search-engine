@@ -85,4 +85,7 @@ public interface FilesystemNotifier {
      * @return identifier about successful removals
      */
     boolean removeListener(FilesystemEventListener listener);
+
+    void invalidateCache();
+
 }

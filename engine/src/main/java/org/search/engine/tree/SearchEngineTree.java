@@ -65,4 +65,6 @@ public interface SearchEngineTree {
      * @return number of nodes with value in the tree
      */
     int size();
+
+    void clear();
 }

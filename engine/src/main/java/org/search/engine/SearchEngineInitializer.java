@@ -44,10 +44,14 @@ public class SearchEngineInitializer implements IndexationEventListener {
     private IndexChanges indexChanges;
 
 
-    SearchEngineInitializer() throws IOException {
+    SearchEngineInitializer() {
         Path folderPath = Paths.get(APP_FOLDER);
         if (!Files.exists(folderPath)) {
-            Files.createDirectory(folderPath);
+            try {
+                Files.createDirectory(folderPath);
+            } catch (IOException ex) {
+                LOG.warn("Can't create app folder engine work without saving");
+            }
         }
         config.registerClass(TreeNode.class, String.class, AtomicInteger.class, HashMap.class);
         if (!initializeTrackedFiles() || !initializeTrackedFolders() || !initializeIndex()
@@ -92,6 +96,14 @@ public class SearchEngineInitializer implements IndexationEventListener {
 
     IndexChanges getIndexChanges() {
         return indexChanges;
+    }
+
+    void invalidateCache() {
+        Stream.of(Paths.get(APP_FOLDER + TRACKED_FILES_FILE), Paths.get(APP_FOLDER + TRACKED_FOLDERS_FILE),
+                Paths.get(APP_FOLDER + INDEX_FILE), Paths.get(APP_FOLDER + INDEXED_DOCUMENTS_FILE))
+                .forEach(this::removeFileIfExist);
+
+        LOG.info("Cache invalidated");
     }
 
     private void calculateIndexChanges() {
@@ -301,4 +313,13 @@ public class SearchEngineInitializer implements IndexationEventListener {
         }
     }
 
+    private void removeFileIfExist(Path filePath) {
+        if (Files.exists(filePath)) {
+            try {
+                Files.delete(filePath);
+            } catch (IOException e) {
+                LOG.warn("Can't remove file {} during invalidation", filePath);
+            }
+        }
+    }
 }
