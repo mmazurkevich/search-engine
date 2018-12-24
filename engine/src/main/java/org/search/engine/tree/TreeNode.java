@@ -8,12 +8,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicReferenceArray;
 
 public class TreeNode implements Serializable {
 
     private static final long serialVersionUID = 7249096246763128397L;
-    private AtomicReferenceArray<TreeNode> outgoingNodes;
+    private TreeNode[] outgoingNodes;
     private List<TreeNode> outgoingNodesAsList;
     private final CharSequence charSequence;
     private TIntHashSet value;
@@ -65,7 +64,7 @@ public class TreeNode implements Serializable {
         if (index < 0) {
             return null;
         }
-        return outgoingNodes.get(index);
+        return outgoingNodes[index];
     }
 
     List<TreeNode> getOutgoingNodes() {
@@ -87,25 +86,25 @@ public class TreeNode implements Serializable {
         if (index < 0) {
             throw new IllegalStateException("Cannot update the reference to the following child node for the edge starting with '" + childNode.getFirstCharSequenceLetter() + "', no such edge already exists: " + childNode);
         }
-        outgoingNodes.set(index, childNode);
+        outgoingNodes[index] = childNode;
     }
 
     private void initOutgoingNodes(List<TreeNode> treeNodes) {
         TreeNode[] childNodeArray = treeNodes.toArray(new TreeNode[treeNodes.size()]);
 
         Arrays.sort(childNodeArray, Comparator.comparing(TreeNode::getFirstCharSequenceLetter));
-        this.outgoingNodes = new AtomicReferenceArray<>(childNodeArray);
-        this.outgoingNodesAsList = new AtomicReferenceArrayList<>(this.outgoingNodes);
+        this.outgoingNodes = childNodeArray;
+        this.outgoingNodesAsList = new AtomicReferenceArrayList(this.outgoingNodes);
     }
 
-    private int binarySearch(AtomicReferenceArray<TreeNode> childNodes, Character firstCharacter) {
+    private int binarySearch(TreeNode[] childNodes, Character firstCharacter) {
         // inspired by Collections#indexedBinarySearch()
         int low = 0;
-        int high = childNodes.length() - 1;
+        int high = childNodes.length - 1;
 
         while (low <= high) {
             int mid = (low + high) >>> 1;
-            TreeNode midVal = childNodes.get(mid);
+            TreeNode midVal = childNodes[mid];
             int cmp = midVal.getFirstCharSequenceLetter().compareTo(firstCharacter);
 
             if (cmp < 0)

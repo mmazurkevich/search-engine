@@ -22,7 +22,6 @@ public class FolderIndexationWorker extends SwingWorker<Void, Integer> implement
 
     @Override
     protected Void doInBackground() {
-        publish(0);
         searchEngine.indexFolder(folderPath, this);
         return null;
     }
@@ -30,12 +29,12 @@ public class FolderIndexationWorker extends SwingWorker<Void, Integer> implement
     @Override
     protected void process(List<Integer> list) {
         list.forEach(it -> {
-            if (it >= 0) {
+            if (it >= 0 && it < 100) {
                 if (!progressBarPanel.isVisible()) {
                     progressBarPanel.setVisible(true);
                 }
                 progressBar.setValue(it);
-            } else if (it == -1) {
+            } else if (it == -1 || it == 100) {
                 progressBarPanel.setVisible(false);
             }
         });

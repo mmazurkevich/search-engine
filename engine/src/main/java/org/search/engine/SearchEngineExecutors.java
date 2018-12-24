@@ -9,15 +9,12 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class SearchEngineExecutors {
 
-    private static final int SCHEDULER_THREADS;
     private static final int EXECUTOR_THREADS;
     private static ScheduledExecutorService scheduledExecutor;
     private static ExecutorService executorService;
     static {
         int availableProcessors = Runtime.getRuntime().availableProcessors();
-        int ratio = 4;
-        SCHEDULER_THREADS = (int)Math.ceil(availableProcessors / ratio);
-        int remainingCores = availableProcessors - SCHEDULER_THREADS;
+        int remainingCores = availableProcessors / 3;
         if (remainingCores < 1) {
             EXECUTOR_THREADS = 1;
         } else {
@@ -28,15 +25,11 @@ public class SearchEngineExecutors {
     private SearchEngineExecutors() {
     }
 
-    public static int getSchedulerThreads() {
-        return SCHEDULER_THREADS;
-    }
-
     public static ScheduledExecutorService getScheduledExecutor() {
         if (scheduledExecutor == null) {
             synchronized (SearchEngineExecutors.class) {
                 if (scheduledExecutor == null) {
-                    scheduledExecutor = Executors.newScheduledThreadPool(SCHEDULER_THREADS + 1);
+                    scheduledExecutor = Executors.newScheduledThreadPool(2);
                 }
             }
         }

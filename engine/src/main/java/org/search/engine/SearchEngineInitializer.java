@@ -70,8 +70,13 @@ public class SearchEngineInitializer implements IndexationEventListener {
 
     @Override
     public void onIndexationFinished() {
-        saveEngineState();
-        LOG.info("Search engine saving cache finished");
+        SearchEngineExecutors.getExecutorService().execute(() -> {
+            saveTrackedFiles();
+            saveTrackedFolders();
+            saveIndex();
+            saveIndexedDocuments();
+            LOG.info("Search engine saving cache finished");
+        });
     }
 
     @Override
@@ -257,13 +262,6 @@ public class SearchEngineInitializer implements IndexationEventListener {
         return false;
     }
 
-    private void saveEngineState() {
-        saveTrackedFiles();
-        saveTrackedFolders();
-        saveIndex();
-        saveIndexedDocuments();
-    }
-
     private void saveTrackedFiles() {
         try {
             Path filePath = Paths.get(APP_FOLDER + TRACKED_FILES_FILE);
@@ -293,7 +291,8 @@ public class SearchEngineInitializer implements IndexationEventListener {
     private void saveIndex() {
         try {
             Path filePath = Paths.get(APP_FOLDER + INDEX_FILE);
-            byte[] objectBytes = config.asByteArray(index.getRoot());
+            TreeNode root = index.getRoot();
+            byte[] objectBytes = config.asByteArray(root);
             Files.write(filePath, objectBytes);
         } catch (IOException e) {
             LOG.warn("Can't save index state", e);
@@ -303,13 +302,10 @@ public class SearchEngineInitializer implements IndexationEventListener {
     private void saveIndexedDocuments() {
         try {
             Path filePath = Paths.get(APP_FOLDER + INDEXED_DOCUMENTS_FILE);
-            byte[] objectBytes = config.asByteArray(indexedDocuments.entrySet().stream()
-                    .collect(Collectors.toMap(e -> e.getKey().toAbsolutePath().toString(),
-                            e -> {
-                                Document document = e.getValue();
-                                return new SerializableDocument(document.getId(), document.isTracked(),
-                                        document.getPath().toAbsolutePath().toString(), document.getModificationTimestamp());
-                            })));
+            Map<String, SerializableDocument> collection = new HashMap<>();
+            indexedDocuments.forEach((key, value) -> collection.put(key.toAbsolutePath().toString(), new SerializableDocument(value.getId(), value.isTracked(),
+                    value.getPath().toAbsolutePath().toString(), value.getModificationTimestamp())));
+            byte[] objectBytes = config.asByteArray(collection);
             Files.write(filePath, objectBytes);
         } catch (IOException e) {
             LOG.warn("Can't save indexed documents state", e);

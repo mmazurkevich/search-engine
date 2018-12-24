@@ -10,7 +10,7 @@ import java.util.stream.Stream;
 public class StandardTokenizer implements Tokenizer {
 
     private static final Set<Character> punctuationMarks = Stream.of('.', ',', '!', '?', ':', ';', '"', '\'', '(', ')',
-            '[', ']', '/', '-', '“', '”', ' ', '<', '>', '{', '}', '+', '*', '^')
+            '[', ']', '/', '-', '“', '”', ' ', '<', '>', '{', '}', '+', '*', '^', '#', '~', '%', '$', '@')
             .collect(Collectors.toCollection(HashSet::new));
 
     /**

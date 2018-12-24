@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -56,11 +57,11 @@ public class SimpleSearchManager implements SearchManager{
                                         matchedRows.add(rowNumber[0]);
                                     }
                                 });
-                            } catch (IOException ex) {
-                                LOG.warn("Finding matched rows in file : {} finished with exception", filePath, ex);
+                            } catch (IOException | UncheckedIOException ex) {
+                                LOG.warn("Finding matched rows in file : {} finished with exception", filePath);
                             }
                             return new SearchResult(filePath.toAbsolutePath().toString(), matchedRows);
-                        }).collect(Collectors.toList());
+                        }).limit(100).collect(Collectors.toList());
                 LOG.debug("Found documents: {}", results.size());
                 return results;
             }

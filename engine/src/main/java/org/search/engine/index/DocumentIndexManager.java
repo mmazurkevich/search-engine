@@ -16,10 +16,12 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 /**
  * Class responsible for indexation of folders or file file also handle events coming from
@@ -56,6 +58,7 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
         this.indexingExecutorService = SearchEngineExecutors.getExecutorService();
         applyIndexChangesIfNeeded(indexChanges);
         notificationManager.addListener(this);
+        scheduleIndexationIfNeeded();
     }
 
     /**
@@ -78,7 +81,7 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
 
                 listeners.add(this);
                 currentIndexationTracker = new IndexationTracker(listener, folderPath);
-                double percentage = (double)getFilesCount(folderPath) / 100;
+                double percentage = (double) getFilesCount(folderPath) / 100;
                 AtomicInteger documentCount = new AtomicInteger(0);
                 Files.walkFileTree(folderPath, new SimpleFileVisitor<Path>() {
                     @Override
@@ -101,6 +104,7 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
                     }
                 });
             } else {
+                listener.onIndexationFinished();
                 LOG.warn("Folder already indexed or no access to folder: {}", folderPath.toAbsolutePath());
             }
         } catch (IOException ex) {
@@ -152,13 +156,14 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
                 indexFolder(folderPath);
                 break;
             case DELETED:
-                for (Map.Entry<Path, Document> documentEntry : indexedDocuments.entrySet()) {
-                    Document document = documentEntry.getValue();
-                    if (document.getPath().startsWith(folderPath)) {
-                        removeDocumentFromIndex(document);
-                        notificationManager.unregisterFolder(document.getParent());
-                    }
-                }
+                List<Document> documents = indexedDocuments.entrySet().stream()
+                        .filter(entry -> entry.getValue().getPath().startsWith(folderPath))
+                        .map(Map.Entry::getValue)
+                        .collect(Collectors.toList());
+                documents.forEach(it -> {
+                    removeDocumentFromIndex(it);
+                    notificationManager.unregisterFolder(it.getParent());
+                });
                 break;
         }
     }
@@ -171,6 +176,7 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
                     it.cancel(false);
                 }
             });
+            //In case of long rollback comment this line due to long delete from index
             onFolderChanged(FilesystemEvent.DELETED, currentIndexationTracker.getIndexingFolder());
         } else {
             LOG.info("There is nothing to cancel");
@@ -201,7 +207,8 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
     }
 
     @Override
-    public void onIndexationProgress(int progress) { }
+    public void onIndexationProgress(int progress) {
+    }
 
     public void invalidateCache() {
         uniqueDocumentId.set(0);
@@ -255,7 +262,6 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
                         currentIndexationTracker.getListener(), documentCount, percentage);
                 Future<?> submit = indexingExecutorService.submit(task);
                 currentIndexationTracker.getIndexingFutures().add(submit);
-                scheduleIndexationIfNeeded();
             } else {
                 LOG.warn("File already indexed or no access to file: {}", filePath.toAbsolutePath());
             }
@@ -271,7 +277,6 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
                         Files.getLastModifiedTime(filePath).toMillis());
                 DocumentReadTask task = new DocumentReadTask(document, indexedDocuments, documentQueue, notificationManager);
                 indexingExecutorService.execute(task);
-                scheduleIndexationIfNeeded();
             } else {
                 LOG.warn("File already indexed or no access to file: {}", filePath.toAbsolutePath());
             }
@@ -314,9 +319,9 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
         return indexedDocuments.containsKey(filePath);
     }
 
-    private boolean hasAccess(Path path) throws IOException {
+    private boolean hasAccess(Path path) {
         if (Files.isRegularFile(path))
-            return Files.isReadable(path) && !Files.isHidden(path);
+            return Files.isReadable(path);
         else
             return Files.exists(path) && Files.isDirectory(path);
     }
@@ -324,11 +329,8 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
     private void scheduleIndexationIfNeeded() {
         if (indexationExecutor == null) {
             indexationExecutor = SearchEngineExecutors.getScheduledExecutor();
-            int schedulerThreads = SearchEngineExecutors.getSchedulerThreads();
-            for (int i = 0; i < schedulerThreads; i++) {
-                IndexationSchedulerTask indexScheduler = new IndexationSchedulerTask(documentQueue, index, tokenizer, listeners);
-                indexationExecutor.scheduleWithFixedDelay(indexScheduler, 0, 1, TimeUnit.SECONDS);
-            }
+            IndexationSchedulerTask indexScheduler = new IndexationSchedulerTask(documentQueue, index, tokenizer, listeners);
+            indexationExecutor.scheduleWithFixedDelay(indexScheduler, 0, 1, TimeUnit.SECONDS);
         }
     }
 

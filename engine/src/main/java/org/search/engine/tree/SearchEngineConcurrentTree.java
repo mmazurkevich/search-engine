@@ -79,6 +79,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
                     TreeNode newChild = createNode(suffixFromExistingEdge, null, searchResult.nodeFound.getValue(), searchResult.nodeFound.getOutgoingNodes(), false);
                     TreeNode newParent = createNode(commonPrefix, parentNode, newValues, Collections.singletonList(newChild), false);
                     newChild.setParent(newParent);
+                    searchResult.nodeFound.getOutgoingNodes().forEach(it -> it.setParent(newChild));
                     parentNode.updateOutgoingNode(newParent);
                     break;
                 }
