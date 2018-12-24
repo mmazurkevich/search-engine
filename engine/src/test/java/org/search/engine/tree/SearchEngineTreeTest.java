@@ -318,48 +318,6 @@ public class SearchEngineTreeTest {
     }
 
     @Test
-    public void testRemoveByValue() {
-        tree.putMergeOnConflict("TEST", 1);
-        tree.putMergeOnConflict("TEAM", 2);
-        tree.putMergeOnConflict("TOAST", 3);
-        tree.putMergeOnConflict("TOOST", 2);
-        tree.putMergeOnConflict("TE", 2);
-
-        String expected = "○\n" +
-                "└── ○ T\n" +
-                "    ├── ○ E {2}\n" +
-                "    │   ├── ○ AM {2}\n" +
-                "    │   └── ○ ST {1}\n" +
-                "    └── ○ O\n" +
-                "        ├── ○ AST {3}\n" +
-                "        └── ○ OST {2}\n";
-        assertEquals(expected, tree.toString());
-
-        tree.removeByValue(2);
-        expected = "○\n" +
-                "└── ○ T\n" +
-                "    ├── ○ EST {1}\n" +
-                "    └── ○ OAST {3}\n";
-        assertEquals(expected, tree.toString());
-    }
-
-    @Test
-    public void testRemoveByValueEmptyRootResult() {
-        tree.putMergeOnConflict("TEST", 1);
-        tree.putMergeOnConflict("TEAM", 1);
-
-        String expected = "○\n" +
-                "└── ○ TE\n" +
-                "    ├── ○ AM {1}\n" +
-                "    └── ○ ST {1}\n";
-        assertEquals(expected, tree.toString());
-
-        tree.removeByValue(1);
-        expected = "○\n";
-        assertEquals(expected, tree.toString());
-    }
-
-    @Test
     public void testGetKeysByValue() {
         tree.putMergeOnConflict("TEST", 1);
         tree.putMergeOnConflict("TEAM", 2);

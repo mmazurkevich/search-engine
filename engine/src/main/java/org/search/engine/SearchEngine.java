@@ -6,6 +6,7 @@ import org.search.engine.exception.SearchEngineInitializationException;
 import org.search.engine.filesystem.FilesystemNotificationManager;
 import org.search.engine.filesystem.FilesystemNotifier;
 import org.search.engine.index.DocumentIndexManager;
+import org.search.engine.index.IndexationEventListener;
 import org.search.engine.search.SearchManager;
 import org.search.engine.model.SearchResult;
 import org.search.engine.search.SimpleSearchManager;
@@ -67,9 +68,9 @@ public class SearchEngine {
      *
      * @param path The path to the indexing folder
      */
-    public void indexFolder(String path) {
+    public void indexFolder(String path, IndexationEventListener listener) {
         if (indexManager != null) {
-            indexManager.indexFolder(path);
+            indexManager.indexFolder(path, listener);
         } else {
             LOG.warn("Search engine not yet initialized");
         }

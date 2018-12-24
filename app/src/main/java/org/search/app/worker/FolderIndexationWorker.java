@@ -6,7 +6,7 @@ import org.search.engine.index.IndexationEventListener;
 import javax.swing.*;
 import java.util.List;
 
-public class FolderIndexationWorker extends SwingWorker<Void, String> implements IndexationEventListener {
+public class FolderIndexationWorker extends SwingWorker<Void, Integer> implements IndexationEventListener {
 
     private final SearchEngine searchEngine;
     private final JPanel progressBarPanel;
@@ -22,30 +22,32 @@ public class FolderIndexationWorker extends SwingWorker<Void, String> implements
 
     @Override
     protected Void doInBackground() {
-        publish("Start");
-        searchEngine.indexFolder(folderPath);
+        publish(0);
+        searchEngine.indexFolder(folderPath, this);
         return null;
     }
 
     @Override
-    protected void process(List<String> list) {
+    protected void process(List<Integer> list) {
         list.forEach(it -> {
-            if (it.equals("Start")) {
-                progressBarPanel.setVisible(true);
-                progressBar.setValue(0);
-            } else {
+            if (it >= 0) {
+                if (!progressBarPanel.isVisible()) {
+                    progressBarPanel.setVisible(true);
+                }
+                progressBar.setValue(it);
+            } else if (it == -1) {
                 progressBarPanel.setVisible(false);
             }
         });
     }
 
-//    @Override
-//    public void onIndexationProgress(int progress) {
-//        publish("Start");
-//    }
+    @Override
+    public void onIndexationProgress(int progress) {
+        publish(progress);
+    }
 
     @Override
     public void onIndexationFinished() {
-        publish("Finish");
+        publish(-1);
     }
 }

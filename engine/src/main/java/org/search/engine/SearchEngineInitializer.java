@@ -74,6 +74,9 @@ public class SearchEngineInitializer implements IndexationEventListener {
         LOG.info("Search engine saving cache finished");
     }
 
+    @Override
+    public void onIndexationProgress(int progress) { }
+
     AtomicInteger getUniqueDocumentId() {
         return uniqueDocumentId;
     }

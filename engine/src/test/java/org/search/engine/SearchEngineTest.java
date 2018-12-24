@@ -4,6 +4,8 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.search.engine.analyzer.WhitespaceTokenizer;
+import org.search.engine.index.IndexationEventListener;
+import org.search.engine.model.SearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,9 +21,18 @@ public class SearchEngineTest {
 
     private SearchEngine searchEngine;
 
+    private IndexationEventListener listener = new IndexationEventListener() {
+        @Override
+        public void onIndexationProgress(int progress) { }
+
+        @Override
+        public void onIndexationFinished() { }
+    };
+
     @Before
     public void setUp() {
         searchEngine = new SearchEngine(new WhitespaceTokenizer());
+        searchEngine.initialize();
     }
 
     @Ignore
@@ -33,7 +44,7 @@ public class SearchEngineTest {
         Thread.sleep(2000);
 
         String searchQuery = "relieve";
-        List<String> searchResult = searchEngine.search(searchQuery);
+        List<SearchResult> searchResult = searchEngine.search(searchQuery);
         assertEquals(1, searchResult.size());
         LOG.debug("Document: {}", searchResult.get(0));
     }
@@ -41,12 +52,12 @@ public class SearchEngineTest {
     @Test
     public void testFolderIndexationAndSearch() throws URISyntaxException, InterruptedException {
         URL resource = SearchEngineTest.class.getResource("/testFolder");
-        searchEngine.indexFolder(resource.toURI().getRawPath());
+        searchEngine.indexFolder(resource.toURI().getRawPath(), listener);
 
         Thread.sleep(2000);
 
         String searchQuery = "mila";
-        List<String> searchResult = searchEngine.search(searchQuery);
+        List<SearchResult> searchResult = searchEngine.search(searchQuery);
         assertEquals(2, searchResult.size());
         LOG.debug("Document1: {}, Document2: {}", searchResult.get(0), searchResult.get(1));
     }

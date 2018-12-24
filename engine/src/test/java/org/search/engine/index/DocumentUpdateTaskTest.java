@@ -14,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
@@ -34,13 +35,13 @@ public class DocumentUpdateTaskTest extends AbstractDocumentIndexationTest {
         Files.write(filePath, Collections.singletonList("Example of text for test file"), StandardCharsets.UTF_8,
                 StandardOpenOption.CREATE);
 
-        Document updatedDocument = new Document(documentId, false, filePath);
+        Document updatedDocument = new Document(documentId, false, filePath, 1);
         indexedDocuments = new ConcurrentHashMap<>();
         index = new SearchEngineConcurrentTree();
         Tokenizer tokenizer = new StandardTokenizer();
         BlockingQueue<DocumentLine> documentLinesQueue = new LinkedBlockingQueue<>();
         DocumentReadTask indexTask = new DocumentReadTask(updatedDocument, indexedDocuments, documentLinesQueue, null);
-        IndexationSchedulerTask scheduler = new IndexationSchedulerTask(documentLinesQueue, index, new StandardTokenizer());
+        IndexationSchedulerTask scheduler = new IndexationSchedulerTask(documentLinesQueue, index, new StandardTokenizer(), new ArrayList<>());
         indexTask.run();
         scheduler.run();
         updateTask = new DocumentUpdateTask(updatedDocument, index, tokenizer);

@@ -11,6 +11,8 @@ import org.search.engine.SearchEngine;
 import javax.swing.*;
 import javax.swing.border.Border;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.util.Collections;
 import java.util.List;
 
@@ -155,6 +157,7 @@ class SearchEngineApp extends JFrame {
 
     private void createProgressPanel() {
         cancelButton = new JButton("Cancel");
+        cancelButton.addActionListener(actionEvent -> searchEngine.cancelFolderIndexation());
 
         progressBar = new JProgressBar();
         progressBar.setStringPainted(true);

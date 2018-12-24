@@ -329,11 +329,10 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
 
             List<TreeNode> currentEdgesFromParent = node.getParent().getOutgoingNodes();
             // Create a list of the outgoing edges of the parent which will remain if we remove this child
-            List<TreeNode> newEdgesOfParent = Arrays.asList(new TreeNode[node.getParent().getOutgoingNodes().size() - 1]);
-            for (int i = 0, added = 0, numParentEdges = currentEdgesFromParent.size(); i < numParentEdges; i++) {
-                TreeNode parentEdgesNode = currentEdgesFromParent.get(i);
+            List<TreeNode> newEdgesOfParent = new ArrayList<>();
+            for (TreeNode parentEdgesNode : currentEdgesFromParent) {
                 if (parentEdgesNode != node) {
-                    newEdgesOfParent.set(added++, parentEdgesNode);
+                    newEdgesOfParent.add(parentEdgesNode);
                 }
             }
 

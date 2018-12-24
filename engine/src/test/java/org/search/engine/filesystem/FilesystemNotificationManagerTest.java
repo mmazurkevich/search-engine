@@ -9,6 +9,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.WatchService;
+import java.util.HashSet;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -26,7 +27,7 @@ public class FilesystemNotificationManagerTest implements FilesystemEventListene
     @Before
     public void setUp() throws IOException {
         watchService = FileSystems.getDefault().newWatchService();
-        notificationManager = new FilesystemNotificationManager(watchService);
+        notificationManager = new FilesystemNotificationManager(watchService, new HashSet<>(), new HashSet<>());
         notificationManager.addListener(this);
     }
 

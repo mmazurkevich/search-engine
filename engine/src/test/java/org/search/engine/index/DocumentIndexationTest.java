@@ -12,6 +12,7 @@ import org.search.engine.tree.SearchEngineConcurrentTree;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Set;
 import java.util.concurrent.*;
 
@@ -34,12 +35,12 @@ public class DocumentIndexationTest extends AbstractDocumentIndexationTest {
         MockitoAnnotations.initMocks(this);
         URL resource = DocumentIndexationTest.class.getResource(fileTitle);
         filePath = Paths.get(resource.toURI());
-        indexingDocument = new Document(documentId, true, filePath);
+        indexingDocument = new Document(documentId, true, filePath, 1);
         indexedDocuments = new ConcurrentHashMap<>();
         index = new SearchEngineConcurrentTree();
         BlockingQueue<DocumentLine> documentLinesQueue = new LinkedBlockingQueue<>();
         task = new DocumentReadTask(indexingDocument, indexedDocuments, documentLinesQueue, notificationManager);
-        scheduler = new IndexationSchedulerTask(documentLinesQueue, index, new StandardTokenizer());
+        scheduler = new IndexationSchedulerTask(documentLinesQueue, index, new StandardTokenizer(), new ArrayList<>());
     }
 
     @Test
