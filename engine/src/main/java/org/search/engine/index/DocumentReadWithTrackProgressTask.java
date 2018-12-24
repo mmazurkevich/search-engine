@@ -1,6 +1,8 @@
 package org.search.engine.index;
 
 import org.search.engine.model.Document;
+import org.search.engine.model.EventType;
+import org.search.engine.model.IndexationEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,13 +24,13 @@ class DocumentReadWithTrackProgressTask implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(DocumentReadWithTrackProgressTask.class);
 
     private final Map<Path, Document> indexedDocuments;
-    private final BlockingQueue<DocumentLine> documentLinesQueue;
+    private final BlockingQueue<IndexationEvent> documentLinesQueue;
     private final Document indexingDocument;
     private final IndexationEventListener listener;
     private final AtomicInteger documentCount;
     private final double percentage;
 
-    DocumentReadWithTrackProgressTask(Document indexingDocument, Map<Path, Document> indexedDocuments, BlockingQueue<DocumentLine> documentLinesQueue,
+    DocumentReadWithTrackProgressTask(Document indexingDocument, Map<Path, Document> indexedDocuments, BlockingQueue<IndexationEvent> documentLinesQueue,
                                       IndexationEventListener listener, AtomicInteger documentCount, double percentage) {
         this.indexedDocuments = indexedDocuments;
         this.indexingDocument = indexingDocument;
@@ -45,7 +47,7 @@ class DocumentReadWithTrackProgressTask implements Runnable {
         try (Stream<String> lines = Files.lines(indexingDocument.getPath())) {
             lines.forEach(line -> {
                 try {
-                    documentLinesQueue.put(new DocumentLine(documentId, line));
+                    documentLinesQueue.put(new IndexationEvent(EventType.ADD_LINE, documentId, line));
                 } catch (InterruptedException ex) {
                     LOG.warn("Put line of file: {} to queue interrupted", indexingDocument.getPath(), ex);
                 }

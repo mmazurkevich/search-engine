@@ -7,6 +7,7 @@ import org.mockito.MockitoAnnotations;
 import org.search.engine.analyzer.StandardTokenizer;
 import org.search.engine.filesystem.FilesystemNotifier;
 import org.search.engine.model.Document;
+import org.search.engine.model.IndexationEvent;
 import org.search.engine.tree.SearchEngineConcurrentTree;
 
 import java.net.URISyntaxException;
@@ -26,6 +27,7 @@ import static org.mockito.internal.verification.VerificationModeFactory.times;
 public class DocumentRemoveTaskTest extends AbstractDocumentIndexationTest {
 
     private DocumentRemoveTask removeTask;
+    private IndexationSchedulerTask scheduler;
     @Mock
     private FilesystemNotifier notificationManager;
 
@@ -37,12 +39,12 @@ public class DocumentRemoveTaskTest extends AbstractDocumentIndexationTest {
         Document removableDocument = new Document(documentId, true, filePath, 1);
         indexedDocuments = new ConcurrentHashMap<>();
         index = new SearchEngineConcurrentTree();
-        BlockingQueue<DocumentLine> documentLinesQueue = new LinkedBlockingQueue<>();
+        BlockingQueue<IndexationEvent> documentLinesQueue = new LinkedBlockingQueue<>();
         DocumentReadTask indexTask = new DocumentReadTask(removableDocument, indexedDocuments, documentLinesQueue, notificationManager);
-        IndexationSchedulerTask scheduler = new IndexationSchedulerTask(documentLinesQueue, index, new StandardTokenizer(), new ArrayList<>());
+        scheduler = new IndexationSchedulerTask(documentLinesQueue, index, new StandardTokenizer(), new ArrayList<>());
         indexTask.run();
         scheduler.run();
-        removeTask = new DocumentRemoveTask(removableDocument, index, indexedDocuments, notificationManager);
+        removeTask = new DocumentRemoveTask(removableDocument, index, indexedDocuments, documentLinesQueue, notificationManager);
     }
 
     @Test
@@ -53,6 +55,7 @@ public class DocumentRemoveTaskTest extends AbstractDocumentIndexationTest {
         assertEquals(1, searchResult.size());
 
         removeTask.run();
+        scheduler.run();
         verify(notificationManager, times(1)).registerFile(filePath);
 
         assertEquals(0, index.size());

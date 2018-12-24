@@ -2,6 +2,8 @@ package org.search.engine.index;
 
 import org.search.engine.filesystem.FilesystemNotifier;
 import org.search.engine.model.Document;
+import org.search.engine.model.EventType;
+import org.search.engine.model.IndexationEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,10 +25,10 @@ class DocumentReadTask implements Runnable {
 
     private final FilesystemNotifier notificationManager;
     private final Map<Path, Document> indexedDocuments;
-    private final BlockingQueue<DocumentLine> documentLinesQueue;
+    private final BlockingQueue<IndexationEvent> documentLinesQueue;
     private final Document indexingDocument;
 
-    DocumentReadTask(Document indexingDocument, Map<Path, Document> indexedDocuments, BlockingQueue<DocumentLine> documentLinesQueue,
+    DocumentReadTask(Document indexingDocument, Map<Path, Document> indexedDocuments, BlockingQueue<IndexationEvent> documentLinesQueue,
                      FilesystemNotifier notificationManager) {
         this.indexedDocuments = indexedDocuments;
         this.indexingDocument = indexingDocument;
@@ -41,7 +43,7 @@ class DocumentReadTask implements Runnable {
         try (Stream<String> lines = Files.lines(indexingDocument.getPath())) {
             lines.forEach(line -> {
                 try {
-                    documentLinesQueue.put(new DocumentLine(documentId, line));
+                    documentLinesQueue.put(new IndexationEvent(EventType.ADD_LINE, documentId, line));
                 } catch (InterruptedException ex) {
                     LOG.warn("Put line of file: {} to queue interrupted", indexingDocument.getPath(), ex);
                 }

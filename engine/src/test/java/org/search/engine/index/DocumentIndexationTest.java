@@ -7,6 +7,7 @@ import org.mockito.MockitoAnnotations;
 import org.search.engine.analyzer.StandardTokenizer;
 import org.search.engine.filesystem.FilesystemNotifier;
 import org.search.engine.model.Document;
+import org.search.engine.model.IndexationEvent;
 import org.search.engine.tree.SearchEngineConcurrentTree;
 
 import java.net.URISyntaxException;
@@ -38,7 +39,7 @@ public class DocumentIndexationTest extends AbstractDocumentIndexationTest {
         indexingDocument = new Document(documentId, true, filePath, 1);
         indexedDocuments = new ConcurrentHashMap<>();
         index = new SearchEngineConcurrentTree();
-        BlockingQueue<DocumentLine> documentLinesQueue = new LinkedBlockingQueue<>();
+        BlockingQueue<IndexationEvent> documentLinesQueue = new LinkedBlockingQueue<>();
         task = new DocumentReadTask(indexingDocument, indexedDocuments, documentLinesQueue, notificationManager);
         scheduler = new IndexationSchedulerTask(documentLinesQueue, index, new StandardTokenizer(), new ArrayList<>());
     }

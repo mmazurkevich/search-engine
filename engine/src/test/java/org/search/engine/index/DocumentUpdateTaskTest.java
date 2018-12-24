@@ -6,6 +6,7 @@ import org.junit.Test;
 import org.search.engine.analyzer.StandardTokenizer;
 import org.search.engine.analyzer.Tokenizer;
 import org.search.engine.model.Document;
+import org.search.engine.model.IndexationEvent;
 import org.search.engine.tree.SearchEngineConcurrentTree;
 
 import java.io.IOException;
@@ -27,6 +28,7 @@ import static org.junit.Assert.assertTrue;
 public class DocumentUpdateTaskTest extends AbstractDocumentIndexationTest {
 
     private DocumentUpdateTask updateTask;
+    private IndexationSchedulerTask scheduler;
     private Path filePath;
 
     @Before
@@ -39,12 +41,12 @@ public class DocumentUpdateTaskTest extends AbstractDocumentIndexationTest {
         indexedDocuments = new ConcurrentHashMap<>();
         index = new SearchEngineConcurrentTree();
         Tokenizer tokenizer = new StandardTokenizer();
-        BlockingQueue<DocumentLine> documentLinesQueue = new LinkedBlockingQueue<>();
+        BlockingQueue<IndexationEvent> documentLinesQueue = new LinkedBlockingQueue<>();
         DocumentReadTask indexTask = new DocumentReadTask(updatedDocument, indexedDocuments, documentLinesQueue, null);
-        IndexationSchedulerTask scheduler = new IndexationSchedulerTask(documentLinesQueue, index, new StandardTokenizer(), new ArrayList<>());
+        scheduler = new IndexationSchedulerTask(documentLinesQueue, index, new StandardTokenizer(), new ArrayList<>());
         indexTask.run();
         scheduler.run();
-        updateTask = new DocumentUpdateTask(updatedDocument, index, tokenizer);
+        updateTask = new DocumentUpdateTask(updatedDocument, index, tokenizer, documentLinesQueue);
     }
 
     @After
@@ -63,6 +65,7 @@ public class DocumentUpdateTaskTest extends AbstractDocumentIndexationTest {
         Files.write(filePath, Collections.singletonList(" another thing"), StandardCharsets.UTF_8,
                 StandardOpenOption.APPEND);
         updateTask.run();
+        scheduler.run();
 
         assertEquals(8, index.size());
         searchResult = index.getValue(searchQuery);

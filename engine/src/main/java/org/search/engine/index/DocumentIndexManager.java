@@ -7,6 +7,8 @@ import org.search.engine.filesystem.FilesystemEventListener;
 import org.search.engine.filesystem.FilesystemNotifier;
 import org.search.engine.model.Document;
 import org.search.engine.model.IndexChanges;
+import org.search.engine.model.IndexationEvent;
+import org.search.engine.model.IndexationTracker;
 import org.search.engine.tree.SearchEngineTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +35,7 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
     private final AtomicInteger uniqueDocumentId;
     private final FilesystemNotifier notificationManager;
     private final Map<Path, Document> indexedDocuments;
-    private final BlockingQueue<DocumentLine> documentLinesQueue;
+    private final BlockingQueue<IndexationEvent> documentQueue;
     private final SearchEngineTree index;
     private final Tokenizer tokenizer;
     private final ExecutorService indexingExecutorService;
@@ -41,16 +43,13 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
     private final List<IndexationEventListener> listeners = new ArrayList<>();
 
     //Tracking current indexation
-    private boolean currentFolderIndexationCanceled;
-    private IndexationEventListener currentIndexationListener;
-    private Path currentIndexingFolder;
-    private List<Future> currentIndexingFutures;
+    private IndexationTracker currentIndexationTracker;
 
     public DocumentIndexManager(SearchEngineTree index, Map<Path, Document> indexedDocuments, FilesystemNotifier notificationManager,
                                 Tokenizer tokenizer, AtomicInteger uniqueDocumentId, IndexChanges indexChanges) {
         this.notificationManager = notificationManager;
         this.indexedDocuments = indexedDocuments;
-        this.documentLinesQueue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
+        this.documentQueue = new LinkedBlockingQueue<>(QUEUE_CAPACITY);
         this.tokenizer = tokenizer;
         this.index = index;
         this.uniqueDocumentId = uniqueDocumentId;
@@ -76,11 +75,9 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
                 if (folderPath.getParent() != null) {
                     notificationManager.registerParentFolder(folderPath.getParent());
                 }
-                currentFolderIndexationCanceled = false;
-                currentIndexingFolder = folderPath;
-                currentIndexingFutures = new ArrayList<>();
-                currentIndexationListener = listener;
+
                 listeners.add(this);
+                currentIndexationTracker = new IndexationTracker(listener, folderPath);
                 double percentage = (double)getFilesCount(folderPath) / 100;
                 AtomicInteger documentCount = new AtomicInteger(0);
                 Files.walkFileTree(folderPath, new SimpleFileVisitor<Path>() {
@@ -97,7 +94,7 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
                     }
 
                     private FileVisitResult getFileVisitResult() {
-                        if (currentFolderIndexationCanceled)
+                        if (currentIndexationTracker.isCanceled())
                             return FileVisitResult.TERMINATE;
                         else
                             return FileVisitResult.CONTINUE;
@@ -167,14 +164,14 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
     }
 
     public void cancelIndexation() {
-        if (currentIndexingFolder != null && currentIndexingFutures != null) {
-            currentFolderIndexationCanceled = true;
-            currentIndexingFutures.forEach(it -> {
+        if (currentIndexationTracker != null) {
+            currentIndexationTracker.setCanceled(true);
+            currentIndexationTracker.getIndexingFutures().forEach(it -> {
                 if (!it.isDone()) {
                     it.cancel(false);
                 }
             });
-            onFolderChanged(FilesystemEvent.DELETED, currentIndexingFolder);
+            onFolderChanged(FilesystemEvent.DELETED, currentIndexationTracker.getIndexingFolder());
         } else {
             LOG.info("There is nothing to cancel");
         }
@@ -196,19 +193,15 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
 
     @Override
     public void onIndexationFinished() {
-        if (currentIndexationListener != null) {
-            currentIndexationListener.onIndexationFinished();
-            currentFolderIndexationCanceled = false;
-            currentIndexingFolder = null;
-            currentIndexingFutures = null;
-            currentIndexationListener = null;
+        if (currentIndexationTracker != null) {
+            currentIndexationTracker.getListener().onIndexationFinished();
+            currentIndexationTracker = null;
             listeners.remove(this);
         }
     }
 
     @Override
-    public void onIndexationProgress(int progress) {
-    }
+    public void onIndexationProgress(int progress) { }
 
     public void invalidateCache() {
         uniqueDocumentId.set(0);
@@ -258,10 +251,10 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
             if (hasAccess(filePath) && !isFileIndexed(filePath)) {
                 Document document = new Document(uniqueDocumentId.incrementAndGet(), false, filePath,
                         Files.getLastModifiedTime(filePath).toMillis());
-                DocumentReadWithTrackProgressTask task = new DocumentReadWithTrackProgressTask(document, indexedDocuments, documentLinesQueue,
-                        currentIndexationListener, documentCount, percentage);
+                DocumentReadWithTrackProgressTask task = new DocumentReadWithTrackProgressTask(document, indexedDocuments, documentQueue,
+                        currentIndexationTracker.getListener(), documentCount, percentage);
                 Future<?> submit = indexingExecutorService.submit(task);
-                currentIndexingFutures.add(submit);
+                currentIndexationTracker.getIndexingFutures().add(submit);
                 scheduleIndexationIfNeeded();
             } else {
                 LOG.warn("File already indexed or no access to file: {}", filePath.toAbsolutePath());
@@ -276,7 +269,7 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
             if (hasAccess(filePath) && !isFileIndexed(filePath)) {
                 Document document = new Document(uniqueDocumentId.incrementAndGet(), shouldTrack, filePath,
                         Files.getLastModifiedTime(filePath).toMillis());
-                DocumentReadTask task = new DocumentReadTask(document, indexedDocuments, documentLinesQueue, notificationManager);
+                DocumentReadTask task = new DocumentReadTask(document, indexedDocuments, documentQueue, notificationManager);
                 indexingExecutorService.execute(task);
                 scheduleIndexationIfNeeded();
             } else {
@@ -289,7 +282,7 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
 
     private void removeDocumentFromIndex(Document removableDocument) {
         if (removableDocument != null) {
-            DocumentRemoveTask task = new DocumentRemoveTask(removableDocument, index, indexedDocuments, notificationManager);
+            DocumentRemoveTask task = new DocumentRemoveTask(removableDocument, index, indexedDocuments, documentQueue, notificationManager);
             indexingExecutorService.execute(task);
         }
     }
@@ -306,7 +299,7 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
                 }
 
                 if (updatingDocument != null) {
-                    DocumentUpdateTask task = new DocumentUpdateTask(updatingDocument, index, tokenizer);
+                    DocumentUpdateTask task = new DocumentUpdateTask(updatingDocument, index, tokenizer, documentQueue);
                     indexingExecutorService.submit(task);
                 }
             } else {
@@ -333,7 +326,7 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
             indexationExecutor = SearchEngineExecutors.getScheduledExecutor();
             int schedulerThreads = SearchEngineExecutors.getSchedulerThreads();
             for (int i = 0; i < schedulerThreads; i++) {
-                IndexationSchedulerTask indexScheduler = new IndexationSchedulerTask(documentLinesQueue, index, tokenizer, listeners);
+                IndexationSchedulerTask indexScheduler = new IndexationSchedulerTask(documentQueue, index, tokenizer, listeners);
                 indexationExecutor.scheduleWithFixedDelay(indexScheduler, 0, 1, TimeUnit.SECONDS);
             }
         }
