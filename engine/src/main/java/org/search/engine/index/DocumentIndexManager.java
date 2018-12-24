@@ -17,6 +17,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -25,7 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * filesystem notifier. Each action start separate task to handle actions independently
  * and to speed up process of indexation.
  */
-public class DocumentIndexManager implements FilesystemEventListener {
+public class DocumentIndexManager implements FilesystemEventListener, IndexationEventListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(DocumentIndexManager.class);
     private static final int QUEUE_CAPACITY = 3_000_000;
@@ -39,6 +40,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
     private final Tokenizer tokenizer;
     private final ExecutorService indexingExecutorService;
     private ScheduledExecutorService indexationExecutor;
+    private CancelableFileVisitor cancelableFileVisitor;
     private final List<IndexationEventListener> listeners = new ArrayList<>();
 
     public DocumentIndexManager(SearchEngineTree index, Map<Path, Document> indexedDocuments, FilesystemNotifier notificationManager,
@@ -63,8 +65,12 @@ public class DocumentIndexManager implements FilesystemEventListener {
         if (path == null || path.isEmpty()) {
             throw new IllegalArgumentException("Folder path must not be null or empty");
         }
-        Path folderPath = Paths.get(path).normalize();
-        indexFolder(folderPath);
+        if (cancelableFileVisitor != null && !cancelableFileVisitor.isCanceled() && !cancelableFileVisitor.isFinished()) {
+            LOG.warn("Current indexation in progress wait for the finish or cancel it");
+        } else {
+            Path folderPath = Paths.get(path).normalize();
+            indexFolder(folderPath, true);
+        }
     }
 
     /**
@@ -108,7 +114,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
         LOG.debug("Handling event: {}  for folder: {}", event, folderPath);
         switch (event) {
             case CREATED:
-                indexFolder(folderPath);
+                indexFolder(folderPath, false);
                 break;
             case DELETED:
                 for (Map.Entry<Path, Document> documentEntry : indexedDocuments.entrySet()) {
@@ -119,6 +125,17 @@ public class DocumentIndexManager implements FilesystemEventListener {
                     }
                 }
                 break;
+        }
+    }
+
+    public void cancelIndexation() {
+        if (cancelableFileVisitor != null && !cancelableFileVisitor.isCanceled() && !cancelableFileVisitor.isFinished()) {
+            cancelableFileVisitor.cancel();
+            cancelableFileVisitor.getVisitedFiles().forEach(file -> onFileChanged(FilesystemEvent.DELETED, file));
+            cancelableFileVisitor.getVisitedFolders().forEach(folder -> onFolderChanged(FilesystemEvent.DELETED, folder));
+//            documentLinesQueue.clear();
+        } else {
+            LOG.info("There is nothing to cancel");
         }
     }
 
@@ -153,7 +170,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
         }
     }
 
-    private void indexFolder(Path folderPath) {
+    private void indexFolder(Path folderPath, boolean cancelable) {
         try {
             //Check that folder is registered and should not be indexed again (not a clean solution)
             if (hasAccess(folderPath) && !notificationManager.isFolderRegistered(folderPath)) {
@@ -161,20 +178,12 @@ public class DocumentIndexManager implements FilesystemEventListener {
                 if (folderPath.getParent() != null) {
                     notificationManager.registerParentFolder(folderPath.getParent());
                 }
-                Files.walkFileTree(folderPath, new SimpleFileVisitor<Path>() {
-
-                    @Override
-                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                        indexFile(file, false);
-                        return FileVisitResult.CONTINUE;
-                    }
-
-                    @Override
-                    public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
-                        notificationManager.registerFolder(dir);
-                        return FileVisitResult.CONTINUE;
-                    }
-                });
+                if (cancelable) {
+                    cancelableFileVisitor = new CancelableFileVisitor(notificationManager, this, folderPath);
+                    Files.walkFileTree(folderPath, cancelableFileVisitor);
+                } else {
+                    Files.walkFileTree(folderPath, new SimpleFileVisitor(notificationManager, this));
+                }
             } else {
                 LOG.warn("Folder already indexed or no access to folder: {}", folderPath.toAbsolutePath());
             }
@@ -183,7 +192,7 @@ public class DocumentIndexManager implements FilesystemEventListener {
         }
     }
 
-    private void indexFile(Path filePath, boolean shouldTrack) {
+    void indexFile(Path filePath, boolean shouldTrack) {
         try {
             if (hasAccess(filePath) && !isFileIndexed(filePath)) {
                 Document document = new Document(uniqueDocumentId.incrementAndGet(), shouldTrack, filePath,
@@ -249,5 +258,10 @@ public class DocumentIndexManager implements FilesystemEventListener {
                 indexationExecutor.scheduleWithFixedDelay(indexScheduler, 0,1, TimeUnit.SECONDS);
             }
         }
+    }
+
+    @Override
+    public void onIndexationFinished() {
+
     }
 }

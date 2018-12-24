@@ -88,6 +88,14 @@ public class SearchEngine {
         }
     }
 
+    public void cancelFolderIndexation() {
+        if (indexManager != null) {
+            indexManager.cancelIndexation();
+        } else {
+            LOG.warn("Search engine not yet initialized");
+        }
+    }
+
     /**
      * Method for searching certain query in the current index
      *
