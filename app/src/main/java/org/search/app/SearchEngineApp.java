@@ -69,7 +69,9 @@ class SearchEngineApp extends JFrame {
             chooser.setDialogTitle("Select folder for indexation");
 
             if (chooser.showDialog(this, "Index") == JFileChooser.APPROVE_OPTION) {
-                FolderIndexationWorker indexationWorker = new FolderIndexationWorker(searchEngine, progressBarPanel, progressBar, chooser.getSelectedFile().getPath());
+                FolderIndexationWorker indexationWorker = new FolderIndexationWorker(searchEngine, progressBarPanel, progressBar,
+                        chooser.getSelectedFile().getPath(), folderIndexMenuItem);
+                folderIndexMenuItem.setEnabled(false);
                 indexationWorker.execute();
             }
         });

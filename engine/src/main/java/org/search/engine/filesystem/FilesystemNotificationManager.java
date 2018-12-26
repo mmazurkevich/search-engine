@@ -141,14 +141,14 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         }
         boolean wasRemoved = false;
         for (Path folder : foldersToRemove) {
+            trackedFolders.remove(folder);
             WatchKey key = registeredFolders.get(folder);
             if (key != null) {
                 registeredFolders.remove(folder);
-                trackedFolders.remove(folder);
                 key.cancel();
                 wasRemoved = true;
-                LOG.debug("Unregistered folder: " + folder);
             }
+            LOG.debug("Unregistered folder: " + folder);
         }
         return wasRemoved;
     }
@@ -259,7 +259,7 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
                 trackedFolders.add(folderPath);
             return isRegistered;
         } catch (IOException ex) {
-            LOG.warn("Exception during folder registration in notification manager", ex);
+            LOG.warn("Exception during folder registration in notification manager");
             return false;
         }
     }

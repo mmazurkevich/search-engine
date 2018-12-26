@@ -17,6 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -42,6 +43,7 @@ public class SearchEngineInitializer implements IndexationEventListener {
     // Folders which changes tracked by system and were registered in the system by track.
     private Set<Path> trackedFolders;
     private IndexChanges indexChanges;
+    private Future<?> lastSavingIndexTask;
 
 
     SearchEngineInitializer() {
@@ -64,13 +66,15 @@ public class SearchEngineInitializer implements IndexationEventListener {
 
     @Override
     public void onIndexationFinished() {
-        SearchEngineExecutors.getExecutorService().execute(() -> {
-            saveTrackedFiles();
-            saveTrackedFolders();
-            saveIndex();
-            saveIndexedDocuments();
-            LOG.info("Search engine saving cache finished");
-        });
+        if (lastSavingIndexTask == null || lastSavingIndexTask.isDone()) {
+            lastSavingIndexTask = SearchEngineExecutors.getExecutorService().submit(() -> {
+                saveTrackedFiles();
+                saveTrackedFolders();
+                saveIndex();
+                saveIndexedDocuments();
+                LOG.info("Search engine saving cache finished");
+            });
+        }
     }
 
     @Override

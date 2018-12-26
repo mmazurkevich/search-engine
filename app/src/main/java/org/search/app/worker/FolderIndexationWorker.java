@@ -12,12 +12,15 @@ public class FolderIndexationWorker extends SwingWorker<Void, Integer> implement
     private final JPanel progressBarPanel;
     private final JProgressBar progressBar;
     private final String folderPath;
+    private final JMenuItem menuItem;
 
-    public FolderIndexationWorker(SearchEngine searchEngine, JPanel progressBarPanel, JProgressBar progressBar, String folderPath) {
+    public FolderIndexationWorker(SearchEngine searchEngine, JPanel progressBarPanel, JProgressBar progressBar,
+                                  String folderPath, JMenuItem menuItem) {
         this.searchEngine = searchEngine;
         this.progressBarPanel = progressBarPanel;
         this.progressBar = progressBar;
         this.folderPath = folderPath;
+        this.menuItem = menuItem;
     }
 
     @Override
@@ -34,7 +37,8 @@ public class FolderIndexationWorker extends SwingWorker<Void, Integer> implement
                     progressBarPanel.setVisible(true);
                 }
                 progressBar.setValue(it);
-            } else if (it == -1 || it == 100) {
+            } else if (it == -1) {
+                menuItem.setEnabled(true);
                 progressBarPanel.setVisible(false);
             }
         });

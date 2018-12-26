@@ -42,7 +42,7 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
     private final Tokenizer tokenizer;
     private final ExecutorService indexingExecutorService;
     private ScheduledExecutorService indexationExecutor;
-    private final List<IndexationEventListener> listeners = new ArrayList<>();
+    private final List<IndexationEventListener> listeners = new CopyOnWriteArrayList<>();
 
     //Tracking current indexation
     private IndexationTracker currentIndexationTracker;
@@ -156,6 +156,7 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
                 indexFolder(folderPath);
                 break;
             case DELETED:
+                notificationManager.unregisterFolder(folderPath);
                 List<Document> documents = indexedDocuments.entrySet().stream()
                         .filter(entry -> entry.getValue().getPath().startsWith(folderPath))
                         .map(Map.Entry::getValue)
@@ -295,25 +296,21 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
     }
 
     private void reindexFile(Path filePath) {
-        try {
-            if (hasAccess(filePath)) {
-                Document updatingDocument = null;
-                for (Map.Entry<Path, Document> documentEntry : indexedDocuments.entrySet()) {
-                    Document document = documentEntry.getValue();
-                    if (Files.isSameFile(filePath, document.getPath())) {
-                        updatingDocument = document;
-                    }
+        if (hasAccess(filePath)) {
+            Document updatingDocument = null;
+            for (Map.Entry<Path, Document> documentEntry : indexedDocuments.entrySet()) {
+                Document document = documentEntry.getValue();
+                if (filePath.equals(document.getPath())) {
+                    updatingDocument = document;
                 }
-
-                if (updatingDocument != null) {
-                    DocumentUpdateTask task = new DocumentUpdateTask(updatingDocument, index, tokenizer, documentQueue);
-                    indexingExecutorService.submit(task);
-                }
-            } else {
-                LOG.warn("Doesn't have access to the file: {}", filePath.toAbsolutePath());
             }
-        } catch (IOException ex) {
-            LOG.warn("File reindexation with exception: {}", filePath.toAbsolutePath(), ex);
+
+            if (updatingDocument != null) {
+                DocumentUpdateTask task = new DocumentUpdateTask(updatingDocument, index, tokenizer, documentQueue);
+                indexingExecutorService.submit(task);
+            }
+        } else {
+            LOG.warn("Doesn't have access to the file: {}", filePath.toAbsolutePath());
         }
     }
 

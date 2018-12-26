@@ -9,6 +9,10 @@ import org.slf4j.LoggerFactory;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 
+/**
+ * Scheduler task responsible for handling document queue and
+ * update index
+ */
 public class IndexationSchedulerTask implements Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(IndexationSchedulerTask.class);
