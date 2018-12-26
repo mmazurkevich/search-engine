@@ -88,4 +88,5 @@ public interface FilesystemNotifier {
 
     void invalidateCache();
 
+    void applyIndexChangesIfNeeded();
 }

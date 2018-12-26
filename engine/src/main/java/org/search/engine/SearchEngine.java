@@ -91,7 +91,13 @@ public class SearchEngine {
 
     public void cancelFolderIndexation() {
         if (indexManager != null) {
+            indexManager.removeListener(engineInitializer);
             indexManager.cancelIndexation();
+            filesystemManager.invalidateCache();
+            indexManager.invalidateCache();
+            engineInitializer.loadIndex(false);
+            filesystemManager.applyIndexChangesIfNeeded();
+            indexManager.addListener(engineInitializer);
         } else {
             LOG.warn("Search engine not yet initialized");
         }

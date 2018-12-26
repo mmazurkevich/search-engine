@@ -15,6 +15,8 @@ public interface SearchEngineTree {
 
     TreeNode getRoot();
 
+    void setRoot(TreeNode root);
+
     /**
      * Method put the given lexeme to the tree with value. But because of storing in the node
      * list of values during conflict it adds this value to the currently exists list.

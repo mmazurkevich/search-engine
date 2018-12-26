@@ -176,8 +176,9 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
                     it.cancel(false);
                 }
             });
+            documentQueue.clear();
             //In case of long rollback comment this line due to long delete from index
-            onFolderChanged(FilesystemEvent.DELETED, currentIndexationTracker.getIndexingFolder());
+            //onFolderChanged(FilesystemEvent.DELETED, currentIndexationTracker.getIndexingFolder());
         } else {
             LOG.info("There is nothing to cancel");
         }
@@ -225,6 +226,7 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
 
             indexChanges.getNewFolders().forEach(folder -> onFolderChanged(FilesystemEvent.CREATED, folder));
             indexChanges.getOldFolders().forEach(folder -> onFolderChanged(FilesystemEvent.DELETED, folder));
+            LOG.info("Finish applying index changes");
         }
     }
 

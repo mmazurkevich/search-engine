@@ -223,7 +223,7 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         LOG.info("Cache invalidated");
     }
 
-    private void applyIndexChangesIfNeeded() {
+    public void applyIndexChangesIfNeeded() {
         trackedFiles.forEach(file -> {
             Path parentFolder = file.getParent();
             if (parentFolder != null) {
@@ -240,6 +240,7 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
                 registerFolder(folder.getParent(), false);
             }
         });
+        LOG.info("Finish applying index changes");
     }
 
     private boolean registerFolder(Path folderPath, boolean shouldTrack) {

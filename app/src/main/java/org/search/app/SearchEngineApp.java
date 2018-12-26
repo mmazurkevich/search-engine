@@ -157,7 +157,17 @@ class SearchEngineApp extends JFrame {
 
     private void createProgressPanel() {
         cancelButton = new JButton("Cancel");
-        cancelButton.addActionListener(actionEvent -> searchEngine.cancelFolderIndexation());
+        cancelButton.addActionListener(actionEvent -> {
+            SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+
+                @Override
+                protected Void doInBackground() {
+                    searchEngine.cancelFolderIndexation();
+                    return null;
+                }
+            };
+            worker.execute();
+        });
 
         progressBar = new JProgressBar();
         progressBar.setStringPainted(true);

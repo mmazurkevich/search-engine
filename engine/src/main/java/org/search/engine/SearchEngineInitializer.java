@@ -54,18 +54,12 @@ public class SearchEngineInitializer implements IndexationEventListener {
             }
         }
         config.registerClass(TreeNode.class, String.class, AtomicInteger.class, HashMap.class);
-        if (!initializeTrackedFiles() || !initializeTrackedFolders() || !initializeIndex()
-                || !initializeIndexedDocuments()) {
-            uniqueDocumentId = new AtomicInteger();
-            indexedDocuments = new ConcurrentHashMap<>();
-            index = new SearchEngineConcurrentTree();
-            trackedFiles = ConcurrentHashMap.newKeySet();
-            trackedFolders = ConcurrentHashMap.newKeySet();
-            LOG.info("Initialized empty engine");
-        } else {
-            calculateIndexChanges();
-            LOG.info("Engine loaded from cache");
-        }
+        uniqueDocumentId = new AtomicInteger();
+        indexedDocuments = new ConcurrentHashMap<>();
+        index = new SearchEngineConcurrentTree();
+        trackedFiles = ConcurrentHashMap.newKeySet();
+        trackedFolders = ConcurrentHashMap.newKeySet();
+        loadIndex(true);
     }
 
     @Override
@@ -114,7 +108,25 @@ public class SearchEngineInitializer implements IndexationEventListener {
         LOG.info("Cache invalidated");
     }
 
+    public void loadIndex(boolean calculateChanges) {
+        if (!initializeTrackedFiles() || !initializeTrackedFolders() || !initializeIndex()
+                || !initializeIndexedDocuments()) {
+            uniqueDocumentId.set(0);
+            indexedDocuments.clear();
+            index.clear();
+            trackedFiles.clear();
+            trackedFolders.clear();
+            LOG.info("Initialized empty engine");
+        } else {
+            if (calculateChanges) {
+                calculateIndexChanges();
+            }
+            LOG.info("Engine loaded from cache");
+        }
+    }
+
     private void calculateIndexChanges() {
+        LOG.info("Start calculating index changes");
         Set<Path> oldFolders = new HashSet<>();
         Set<Path> newFolders = new HashSet<>();
 
@@ -179,6 +191,7 @@ public class SearchEngineInitializer implements IndexationEventListener {
         indexedFiles.removeAll(checkedFiles);
         oldFiles.addAll(indexedFiles);
         indexChanges = new IndexChanges(oldFolders, newFolders, newFiles, oldFiles, changedFiles);
+        LOG.info("Finish calculating index changes");
     }
 
     private boolean initializeTrackedFiles() {
@@ -187,7 +200,6 @@ public class SearchEngineInitializer implements IndexationEventListener {
             try {
                 byte[] fileBytes = Files.readAllBytes(filePath);
                 List<String> paths = (ArrayList<String>) config.asObject(fileBytes);
-                trackedFiles = ConcurrentHashMap.newKeySet();
                 paths.forEach(it -> trackedFiles.add(Paths.get(it)));
                 LOG.info("TrackedFiles loaded from file");
                 return true;
@@ -205,7 +217,6 @@ public class SearchEngineInitializer implements IndexationEventListener {
             try {
                 byte[] fileBytes = Files.readAllBytes(filePath);
                 List<String> paths = (ArrayList<String>) config.asObject(fileBytes);
-                trackedFolders = ConcurrentHashMap.newKeySet();
                 paths.forEach(it -> trackedFolders.add(Paths.get(it)));
                 LOG.info("TrackedFolders loaded from file");
                 return true;
@@ -223,7 +234,7 @@ public class SearchEngineInitializer implements IndexationEventListener {
             try {
                 byte[] fileBytes = Files.readAllBytes(filePath);
                 TreeNode root = (TreeNode) config.asObject(fileBytes);
-                index = new SearchEngineConcurrentTree(root);
+                index.setRoot(root);
                 LOG.info("Index loaded from file");
                 return true;
             } catch (IOException | ClassCastException e) {
@@ -240,7 +251,6 @@ public class SearchEngineInitializer implements IndexationEventListener {
             try {
                 byte[] fileBytes = Files.readAllBytes(filePath);
                 Map<String, SerializableDocument> documents = (HashMap<String, SerializableDocument>) config.asObject(fileBytes);
-                indexedDocuments = new ConcurrentHashMap<>();
 
                 int maxId = 0;
                 for (Map.Entry<String, SerializableDocument> entry : documents.entrySet()) {
@@ -251,7 +261,7 @@ public class SearchEngineInitializer implements IndexationEventListener {
                         maxId = document.getId();
                     }
                 }
-                uniqueDocumentId = new AtomicInteger(maxId);
+                uniqueDocumentId.set(maxId);
                 LOG.info("IndexedDocuments loaded from file");
                 return true;
             } catch (IOException | ClassCastException e) {

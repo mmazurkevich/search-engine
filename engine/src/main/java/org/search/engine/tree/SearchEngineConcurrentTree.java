@@ -30,12 +30,12 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
         this.root = createNode("", null, null, Collections.emptyList(), true);
     }
 
-    public SearchEngineConcurrentTree(TreeNode root) {
-        this.root = root;
-    }
-
     public TreeNode getRoot() {
         return root;
+    }
+
+    public void setRoot(TreeNode root) {
+        this.root = root;
     }
 
     /**
