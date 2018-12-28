@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 import javax.swing.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
@@ -30,8 +31,8 @@ public class SearchWorker extends SwingWorker<List<RowFile>, Void> {
     protected List<RowFile> doInBackground() {
         return searchEngine.search(searchField.getText()).stream().map(it -> {
             List<RowFile> fileRows = new ArrayList<>();
-            for (int row: it.getRowNumbers()) {
-                fileRows.add(new RowFile(it.getFileName(), row));
+            for (Map.Entry<Integer, List<Integer>> row: it.getRowNumbers().entrySet()) {
+                fileRows.add(new RowFile(it.getFileName(), row.getKey(), row.getValue()));
             }
             return fileRows;
         }).flatMap(List::stream).collect(Collectors.toList());

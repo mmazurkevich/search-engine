@@ -16,7 +16,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -31,7 +30,7 @@ import java.util.stream.Collectors;
 public class DocumentIndexManager implements FilesystemEventListener, IndexationEventListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(DocumentIndexManager.class);
-    private static final int QUEUE_CAPACITY = 3_000_000;
+    private static final int QUEUE_CAPACITY = 200_000;
 
     //Unique concurrent document Id generator
     private final AtomicInteger uniqueDocumentId;

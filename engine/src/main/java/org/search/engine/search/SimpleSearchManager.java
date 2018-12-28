@@ -49,12 +49,18 @@ public class SimpleSearchManager implements SearchManager{
                         .map(entry -> {
                             Path filePath = entry.getValue().getPath();
                             int[] rowNumber = {0};
-                            List<Integer> matchedRows = new ArrayList<>();
+                            Map<Integer, List<Integer>> matchedRows = new LinkedHashMap<>();
                             try (Stream<String> lines = Files.lines(filePath)) {
                                 lines.forEach(line -> {
                                     rowNumber[0]++;
-                                    if (tokenizer.tokenize(line).contains(searchQuery)) {
-                                        matchedRows.add(rowNumber[0]);
+                                    List<Integer> positionsInRow = new ArrayList<>();
+                                    tokenizer.tokenize(line).forEach(token -> {
+                                        if (token.getContent().equals(searchQuery)) {
+                                            positionsInRow.add(token.getPositionInRow());
+                                        }
+                                    });
+                                    if (!positionsInRow.isEmpty()) {
+                                        matchedRows.put(rowNumber[0], positionsInRow);
                                     }
                                 });
                             } catch (IOException | UncheckedIOException ex) {

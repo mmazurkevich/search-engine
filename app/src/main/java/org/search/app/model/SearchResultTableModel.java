@@ -44,6 +44,10 @@ public class SearchResultTableModel extends AbstractTableModel {
         return false;
     }
 
+    public RowFile getRowFile(int rowIndex) {
+        return data.get(rowIndex);
+    }
+
     public void setData(List<RowFile> data) {
         this.data = data;
     }

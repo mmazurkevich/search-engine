@@ -1,10 +1,12 @@
 package org.search.engine.analyzer;
 
+import org.search.engine.model.Token;
+
 import java.util.List;
 
 /**
  * API for classes which are responsible for splitting incoming content to
- * the separate leksems
+ * the separate lexems
  */
 public interface Tokenizer {
 
@@ -14,5 +16,5 @@ public interface Tokenizer {
      * @param content The string which should be divided by the certain rules
      * @return The list of splitted tokens
      */
-    List<String> tokenize(String content);
+    List<Token> tokenize(String content);
 }

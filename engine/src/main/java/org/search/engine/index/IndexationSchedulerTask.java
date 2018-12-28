@@ -42,7 +42,7 @@ public class IndexationSchedulerTask implements Runnable {
                     case ADD_LINE:
                         int documentId = indexationEvent.getDocumentId();
                         tokenizer.tokenize(indexationEvent.getContent())
-                                .forEach(token -> index.putMergeOnConflict(token, documentId));
+                                .forEach(token -> index.putMergeOnConflict(token.getContent(), documentId));
                         break;
                     case REMOVE:
                         index.removeByKeyAndValue(indexationEvent.getContent(), indexationEvent.getDocumentId());

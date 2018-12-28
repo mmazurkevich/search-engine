@@ -31,19 +31,39 @@ public class Document implements Serializable {
         return id;
     }
 
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public boolean isTracked() {
         return tracked;
+    }
+
+    public void setTracked(boolean tracked) {
+        this.tracked = tracked;
     }
 
     public Path getPath() {
         return path;
     }
 
+    public void setPath(Path path) {
+        this.path = path;
+    }
+
     public Path getParent() {
         return parent;
     }
 
+    public void setParent(Path parent) {
+        this.parent = parent;
+    }
+
     public long getModificationTimestamp() {
         return modificationTimestamp;
+    }
+
+    public void setModificationTimestamp(long modificationTimestamp) {
+        this.modificationTimestamp = modificationTimestamp;
     }
 }

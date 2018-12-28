@@ -45,12 +45,13 @@ class DocumentUpdateTask implements Runnable {
 
         try (Stream<String> lines = Files.lines(updatingDocument.getPath())) {
             lines.forEach(line -> tokenizer.tokenize(line).forEach(token -> {
-                if (oldDocumentTokens.contains(token)) {
-                    oldDocumentTokens.remove(token);
+                String content = token.getContent();
+                if (oldDocumentTokens.contains(content)) {
+                    oldDocumentTokens.remove(content);
                 } else {
                     //It's a new token, should be added to the index
                     try {
-                        documentQueue.put(new IndexationEvent(EventType.ADD, documentId, token));
+                        documentQueue.put(new IndexationEvent(EventType.ADD, documentId, content));
                     } catch (InterruptedException ex) {
                         LOG.warn("Put ADD to queue interrupted", ex);
                     }
@@ -63,6 +64,7 @@ class DocumentUpdateTask implements Runnable {
                     LOG.warn("Put DELETE to queue interrupted", ex);
                 }
             });
+            updatingDocument.setModificationTimestamp(Files.getLastModifiedTime(updatingDocument.getPath()).toMillis());
             long end = System.currentTimeMillis();
             LOG.debug("Update index for file: {} took {}ms", updatingDocument.getPath(), (end - start));
         } catch (IOException ex) {

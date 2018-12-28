@@ -1,6 +1,7 @@
 package org.search.app.listener;
 
 import org.search.app.component.JSearchResultTable;
+import org.search.app.model.RowFile;
 import org.search.app.model.SearchResultTableModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +14,8 @@ import javax.swing.text.DefaultHighlighter;
 import java.awt.*;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class FileSelectionListener implements ListSelectionListener {
 
@@ -21,22 +24,25 @@ public class FileSelectionListener implements ListSelectionListener {
     private final SearchResultTableModel tableModel;
     private final JSearchResultTable searchResultTable;
     private final JTextArea documentPreview;
+    private final JTextField searchField;
     private final DefaultHighlighter.DefaultHighlightPainter painter;
-    private Object previousHighlight;
+    private List<Object> previousHighlights = new ArrayList<>();
     private String previousFile;
 
-    public FileSelectionListener(SearchResultTableModel tableModel, JSearchResultTable searchResultTable, JTextArea documentPreview) {
+    public FileSelectionListener(SearchResultTableModel tableModel, JSearchResultTable searchResultTable, JTextArea documentPreview,
+                                 JTextField searchField) {
         this.tableModel = tableModel;
         this.searchResultTable = searchResultTable;
         this.documentPreview = documentPreview;
+        this.searchField = searchField;
         this.painter = new DefaultHighlighter.DefaultHighlightPainter(Color.YELLOW);
     }
 
     @Override
     public void valueChanged(ListSelectionEvent e) {
         if (searchResultTable.getSelectedRow() >= 0) {
-            String filePath = getSelectedFile();
-            int rowNumber = getMatchedRow();
+            RowFile rowFile = getSelectedRowFile();
+            String filePath = rowFile.getFilePath();
             if (previousFile == null || !previousFile.equals(filePath) || documentPreview.getText().isEmpty()) {
                 try (FileReader reader = new FileReader(filePath)) {
                     documentPreview.read(reader, filePath);
@@ -47,7 +53,7 @@ public class FileSelectionListener implements ListSelectionListener {
                 previousFile = filePath;
             }
             try {
-                highlightAndScrollRow(rowNumber);
+                highlightAndScrollRow(rowFile.getRowNumber(), rowFile.getPositions());
             } catch (BadLocationException ex) {
                 LOG.warn("Exception during highlighting file");
                 documentPreview.setText("");
@@ -57,21 +63,23 @@ public class FileSelectionListener implements ListSelectionListener {
         }
     }
 
-    private String getSelectedFile() {
-        return tableModel.getValueAt(searchResultTable.getSelectedRow(), 0);
+    private RowFile getSelectedRowFile() {
+        return tableModel.getRowFile(searchResultTable.getSelectedRow());
     }
 
-    private int getMatchedRow() {
-        return Integer.parseInt(tableModel.getValueAt(searchResultTable.getSelectedRow(), 1));
-    }
-
-    private void highlightAndScrollRow(int rowNumber) throws BadLocationException {
-        if (previousHighlight != null) {
-            documentPreview.getHighlighter().removeHighlight(previousHighlight);
+    private void highlightAndScrollRow(int rowNumber, List<Integer> positions) throws BadLocationException {
+        String searchQuery = searchField.getText();
+        if (!previousHighlights.isEmpty()) {
+            previousHighlights.forEach(it -> documentPreview.getHighlighter().removeHighlight(it));
         }
+        previousHighlights = new ArrayList<>();
         int startIndex = documentPreview.getLineStartOffset(rowNumber - 1);
-        int endIndex = documentPreview.getLineEndOffset(rowNumber - 1);
-        previousHighlight = documentPreview.getHighlighter().addHighlight(startIndex, endIndex, painter);
+        for (int position: positions) {
+            int startPosition = startIndex + position;
+            int endPosition = startPosition + searchQuery.length();
+            Object highlight = documentPreview.getHighlighter().addHighlight(startPosition, endPosition, painter);
+            previousHighlights.add(highlight);
+        }
         documentPreview.setCaretPosition(startIndex);
     }
 }

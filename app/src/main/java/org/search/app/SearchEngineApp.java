@@ -1,5 +1,8 @@
 package org.search.app;
 
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.fife.ui.rtextarea.RTextScrollPane;
 import org.search.app.component.JSearchResultTable;
 import org.search.app.listener.FileSelectionListener;
 import org.search.app.listener.SearchActionListener;
@@ -9,12 +12,8 @@ import org.search.app.worker.FolderIndexationWorker;
 import org.search.engine.SearchEngine;
 
 import javax.swing.*;
-import javax.swing.border.Border;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.Collections;
-import java.util.List;
 
 import static javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED;
 import static javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED;
@@ -121,15 +120,17 @@ class SearchEngineApp extends JFrame {
 
         searchButton = new JButton("Search");
         searchField = new JTextField();
+
         documentPreview = createDocumentPreviewArea();
 
         final SearchResultTableModel tableModel = new SearchResultTableModel();
         searchResultTable = new JSearchResultTable(tableModel);
         searchResultTable.setFillsViewportHeight(true);
-        final JScrollPane documentPreviewScrollPane = new JScrollPane(documentPreview, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED);
+        final JScrollPane documentPreviewScrollPane = new RTextScrollPane(documentPreview, true);
         documentPreviewScrollPane.setPreferredSize(new Dimension(0, 150));
         searchResultTable.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        searchResultTable.getSelectionModel().addListSelectionListener(new FileSelectionListener(tableModel, searchResultTable, documentPreview));
+        searchResultTable.getSelectionModel().addListSelectionListener(new FileSelectionListener(tableModel,
+                searchResultTable, documentPreview, searchField));
         final JScrollPane scrollPane = new JScrollPane(searchResultTable, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
         searchButton.addActionListener(new SearchActionListener(searchEngine, searchField, searchResultTable));
@@ -180,8 +181,10 @@ class SearchEngineApp extends JFrame {
         progressBarPanel.setVisible(false);
     }
 
-    private JTextArea createDocumentPreviewArea() {
-        final JTextArea documentPreviewArea = new JTextArea();
+    private RSyntaxTextArea createDocumentPreviewArea() {
+        final RSyntaxTextArea documentPreviewArea = new RSyntaxTextArea();
+        documentPreviewArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
+        documentPreviewArea.setPopupMenu(null);
         documentPreviewArea.setEditable(false);
         return documentPreviewArea;
     }
