@@ -1,5 +1,7 @@
 package org.search.app.listener;
 
+import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
+import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.search.app.component.JSearchResultTable;
 import org.search.app.model.RowFile;
 import org.search.app.model.SearchResultTableModel;
@@ -23,13 +25,13 @@ public class FileSelectionListener implements ListSelectionListener {
 
     private final SearchResultTableModel tableModel;
     private final JSearchResultTable searchResultTable;
-    private final JTextArea documentPreview;
+    private final RSyntaxTextArea documentPreview;
     private final JTextField searchField;
     private final DefaultHighlighter.DefaultHighlightPainter painter;
     private List<Object> previousHighlights = new ArrayList<>();
     private String previousFile;
 
-    public FileSelectionListener(SearchResultTableModel tableModel, JSearchResultTable searchResultTable, JTextArea documentPreview,
+    public FileSelectionListener(SearchResultTableModel tableModel, JSearchResultTable searchResultTable, RSyntaxTextArea documentPreview,
                                  JTextField searchField) {
         this.tableModel = tableModel;
         this.searchResultTable = searchResultTable;
@@ -46,6 +48,7 @@ public class FileSelectionListener implements ListSelectionListener {
             if (previousFile == null || !previousFile.equals(filePath) || documentPreview.getText().isEmpty()) {
                 try (FileReader reader = new FileReader(filePath)) {
                     documentPreview.read(reader, filePath);
+                    setPreviewSyntax(filePath.toLowerCase());
                 } catch (IOException ex) {
                     LOG.warn("Exception during loading file");
                     documentPreview.setText("");
@@ -65,6 +68,28 @@ public class FileSelectionListener implements ListSelectionListener {
 
     private RowFile getSelectedRowFile() {
         return tableModel.getRowFile(searchResultTable.getSelectedRow());
+    }
+
+    private void setPreviewSyntax(String filePath) {
+        if (filePath.endsWith(".java")) {
+            documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
+        } else if (filePath.endsWith(".html")) {
+            documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_HTML);
+        } else if (filePath.endsWith(".xml")) {
+            documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_XML);
+        } else if (filePath.endsWith(".groovy")) {
+            documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_GROOVY);
+        } else if (filePath.endsWith(".js")) {
+            documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
+        } else if (filePath.endsWith(".py")) {
+            documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
+        } else if (filePath.endsWith(".rb")) {
+            documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
+        } else if (filePath.endsWith(".kt")) {
+
+        } else {
+            documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
+        }
     }
 
     private void highlightAndScrollRow(int rowNumber, List<Integer> positions) throws BadLocationException {

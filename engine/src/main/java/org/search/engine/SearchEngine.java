@@ -72,6 +72,7 @@ public class SearchEngine {
         if (indexManager != null) {
             indexManager.indexFolder(path, listener);
         } else {
+            listener.onIndexationFinished();
             LOG.warn("Search engine not yet initialized");
         }
     }

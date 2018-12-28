@@ -26,7 +26,7 @@ class SearchEngineApp extends JFrame {
     private JButton searchButton;
     private JButton cancelButton;
     private JTextField searchField;
-    private JTextArea documentPreview;
+    private RSyntaxTextArea documentPreview;
     private JSearchResultTable searchResultTable;
     private JPanel progressBarPanel;
     private JProgressBar progressBar;
@@ -183,7 +183,6 @@ class SearchEngineApp extends JFrame {
 
     private RSyntaxTextArea createDocumentPreviewArea() {
         final RSyntaxTextArea documentPreviewArea = new RSyntaxTextArea();
-        documentPreviewArea.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
         documentPreviewArea.setPopupMenu(null);
         documentPreviewArea.setEditable(false);
         return documentPreviewArea;
