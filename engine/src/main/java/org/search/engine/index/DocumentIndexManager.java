@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 public class DocumentIndexManager implements FilesystemEventListener, IndexationEventListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(DocumentIndexManager.class);
-    private static final int QUEUE_CAPACITY = 200_000;
+    private static final int QUEUE_CAPACITY = 500_000;
 
     //Unique concurrent document Id generator
     private final AtomicInteger uniqueDocumentId;
@@ -80,6 +80,7 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
 
                 listeners.add(this);
                 currentIndexationTracker = new IndexationTracker(listener, folderPath);
+                LOG.info("Calculating overall files count");
                 double percentage = (double) getFilesCount(folderPath) / 100;
                 AtomicInteger documentCount = new AtomicInteger(0);
                 Files.walkFileTree(folderPath, new SimpleFileVisitor<Path>() {

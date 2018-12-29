@@ -2,8 +2,10 @@ package org.search.engine.analyzer;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.search.engine.model.Token;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 
@@ -20,23 +22,23 @@ public class WhitespaceTokenizerTest {
     public void testSimpleContentTokenize() {
         String content = "I'am test    example string. ";
         String expectedTokens = "[I'am, test, example, string.]";
-        List<String> tokens = tokenizer.tokenize(content);
+        List<Token> tokens = tokenizer.tokenize(content);
         assertNotNull(tokens);
         assertEquals(4, tokens.size());
-        assertEquals(expectedTokens, tokens.toString());
+        assertEquals(expectedTokens, tokens.stream().map(Token::getContent).collect(Collectors.toList()).toString());
     }
 
     @Test
     public void testEmptyContentTokenize() {
         String content = "";
-        List<String> tokens = tokenizer.tokenize(content);
+        List<Token> tokens = tokenizer.tokenize(content);
         assertNotNull(tokens);
         assertTrue(tokens.isEmpty());
     }
 
     @Test
     public void testNullContentTokenize() {
-        List<String> tokens = tokenizer.tokenize(null);
+        List<Token> tokens = tokenizer.tokenize(null);
         assertNotNull(tokens);
         assertTrue(tokens.isEmpty());
     }

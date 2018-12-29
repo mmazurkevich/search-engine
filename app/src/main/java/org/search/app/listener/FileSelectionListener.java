@@ -77,7 +77,7 @@ public class FileSelectionListener implements ListSelectionListener {
             documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_HTML);
         } else if (filePath.endsWith(".xml")) {
             documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_XML);
-        } else if (filePath.endsWith(".groovy")) {
+        } else if (filePath.endsWith(".groovy") || filePath.endsWith(".gradle")) {
             documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_GROOVY);
         } else if (filePath.endsWith(".js")) {
             documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
@@ -85,7 +85,7 @@ public class FileSelectionListener implements ListSelectionListener {
             documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
         } else if (filePath.endsWith(".rb")) {
             documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
-        } else if (filePath.endsWith(".kt")) {
+        } else if (filePath.endsWith(".kt") || filePath.endsWith(".kts")) {
             documentPreview.setSyntaxEditingStyle("text/kotlin");
         } else {
             documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);

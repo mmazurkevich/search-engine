@@ -31,6 +31,7 @@ class SearchEngineApp extends JFrame {
     private RSyntaxTextArea documentPreview;
     private JSearchResultTable searchResultTable;
     private JPanel progressBarPanel;
+    private JLabel progressDescription;
     private JProgressBar progressBar;
 
     SearchEngineApp() {
@@ -70,9 +71,12 @@ class SearchEngineApp extends JFrame {
             chooser.setDialogTitle("Select folder for indexation");
 
             if (chooser.showDialog(this, "Index") == JFileChooser.APPROVE_OPTION) {
-                FolderIndexationWorker indexationWorker = new FolderIndexationWorker(searchEngine, progressBarPanel, progressBar,
+                FolderIndexationWorker indexationWorker = new FolderIndexationWorker(searchEngine, progressBarPanel, progressBar, progressDescription,
                         chooser.getSelectedFile().getPath(), folderIndexMenuItem);
                 folderIndexMenuItem.setEnabled(false);
+                progressBarPanel.setVisible(true);
+                progressBar.setValue(0);
+                progressDescription.setText("Prepare to indexation");
                 indexationWorker.execute();
             }
         });
@@ -174,10 +178,13 @@ class SearchEngineApp extends JFrame {
             worker.execute();
         });
 
+        progressDescription = new JLabel();
+
         progressBar = new JProgressBar();
         progressBar.setStringPainted(true);
 
         progressBarPanel = new JPanel(new BorderLayout());
+        progressBarPanel.add(progressDescription, BorderLayout.WEST);
         progressBarPanel.add(progressBar, BorderLayout.CENTER);
         progressBarPanel.add(cancelButton, BorderLayout.EAST);
         progressBarPanel.setVisible(false);
