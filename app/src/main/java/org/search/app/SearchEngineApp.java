@@ -1,7 +1,9 @@
 package org.search.app;
 
+import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
+import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.search.app.component.JSearchResultTable;
 import org.search.app.listener.FileSelectionListener;
@@ -182,6 +184,9 @@ class SearchEngineApp extends JFrame {
     }
 
     private RSyntaxTextArea createDocumentPreviewArea() {
+        AbstractTokenMakerFactory abstractTokenMakerFactory = (AbstractTokenMakerFactory) TokenMakerFactory.getDefaultInstance();
+        abstractTokenMakerFactory.putMapping("text/kotlin", "org.search.app.model.KotlinTokenMaker");
+
         final RSyntaxTextArea documentPreviewArea = new RSyntaxTextArea();
         documentPreviewArea.setPopupMenu(null);
         documentPreviewArea.setEditable(false);

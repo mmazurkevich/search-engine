@@ -86,7 +86,7 @@ public class FileSelectionListener implements ListSelectionListener {
         } else if (filePath.endsWith(".rb")) {
             documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
         } else if (filePath.endsWith(".kt")) {
-
+            documentPreview.setSyntaxEditingStyle("text/kotlin");
         } else {
             documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
         }
