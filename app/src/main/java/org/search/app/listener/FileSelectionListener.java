@@ -1,5 +1,6 @@
 package org.search.app.listener;
 
+import org.apache.commons.io.FilenameUtils;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
 import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.search.app.component.JSearchResultTable;
@@ -48,7 +49,7 @@ public class FileSelectionListener implements ListSelectionListener {
             if (previousFile == null || !previousFile.equals(filePath) || documentPreview.getText().isEmpty()) {
                 try (FileReader reader = new FileReader(filePath)) {
                     documentPreview.read(reader, filePath);
-                    setPreviewSyntax(filePath.toLowerCase());
+                    setPreviewSyntax(FilenameUtils.getExtension(filePath.toLowerCase()));
                 } catch (IOException ex) {
                     LOG.warn("Exception during loading file");
                     documentPreview.setText("");
@@ -70,25 +71,38 @@ public class FileSelectionListener implements ListSelectionListener {
         return tableModel.getRowFile(searchResultTable.getSelectedRow());
     }
 
-    private void setPreviewSyntax(String filePath) {
-        if (filePath.endsWith(".java")) {
-            documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
-        } else if (filePath.endsWith(".html")) {
-            documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_HTML);
-        } else if (filePath.endsWith(".xml")) {
-            documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_XML);
-        } else if (filePath.endsWith(".groovy") || filePath.endsWith(".gradle")) {
-            documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_GROOVY);
-        } else if (filePath.endsWith(".js")) {
-            documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
-        } else if (filePath.endsWith(".py")) {
-            documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
-        } else if (filePath.endsWith(".rb")) {
-            documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
-        } else if (filePath.endsWith(".kt") || filePath.endsWith(".kts")) {
-            documentPreview.setSyntaxEditingStyle("text/kotlin");
-        } else {
-            documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
+    private void setPreviewSyntax(String fileExtension) {
+        switch (fileExtension) {
+            case "java":
+                documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVA);
+                break;
+            case "html":
+                documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_HTML);
+                break;
+            case "xml":
+            case "pom":
+                documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_XML);
+                break;
+            case "groovy":
+            case "gradle":
+                documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_GROOVY);
+                break;
+            case "js":
+                documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_JAVASCRIPT);
+                break;
+            case "py":
+                documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_PYTHON);
+                break;
+            case "rb":
+                documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_RUBY);
+                break;
+            case "kt":
+            case "kts":
+                documentPreview.setSyntaxEditingStyle("text/kotlin");
+                break;
+            default:
+                documentPreview.setSyntaxEditingStyle(SyntaxConstants.SYNTAX_STYLE_NONE);
+                break;
         }
     }
 
