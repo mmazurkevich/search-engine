@@ -25,5 +25,6 @@ dependencies {
     compile project(':engine')
     compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.2.3'
     compile group: 'com.fifesoft', name: 'rsyntaxtextarea', version: '3.0.0'
-    compile group: 'commons-io', name: 'commons-io', version: '2.6' 
+    compile group: 'commons-io', name: 'commons-io', version: '2.6'
+    compile group: 'com.atlascopco', name: 'hunspell-bridj', version: '1.0.4'
 }

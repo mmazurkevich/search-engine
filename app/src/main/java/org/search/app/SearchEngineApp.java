@@ -15,6 +15,7 @@ import org.search.engine.SearchEngine;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.KeyEvent;
 import java.util.Collections;
 
 import static javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED;
@@ -143,11 +144,44 @@ class SearchEngineApp extends JFrame {
         searchField.addKeyListener(new SearchKeyListener(searchEngine, searchField, searchResultTable));
 
         //Creating search form
+        JPanel searchOptionsPanel = new JPanel();
+        searchOptionsPanel.setLayout(new BoxLayout(searchOptionsPanel, BoxLayout.Y_AXIS));
+
         JPanel searchPanel = new JPanel(new BorderLayout());
         searchPanel.add(searchField, BorderLayout.CENTER);
         searchPanel.add(searchButton, BorderLayout.EAST);
 
-        panel.add(searchPanel, BorderLayout.PAGE_START);
+        JRadioButton birdButton = new JRadioButton("One");
+        birdButton.setMnemonic(KeyEvent.VK_B);
+        birdButton.setActionCommand("One");
+        birdButton.setSelected(true);
+
+        JRadioButton catButton = new JRadioButton("Two");
+        catButton.setMnemonic(KeyEvent.VK_C);
+        catButton.setActionCommand("Two");
+
+        ButtonGroup group = new ButtonGroup();
+        group.add(birdButton);
+        group.add(catButton);
+
+        JPanel optionsPanel = new JPanel();
+        optionsPanel.setLayout(new BoxLayout(optionsPanel, BoxLayout.LINE_AXIS));
+        optionsPanel.add(birdButton);
+        optionsPanel.add(catButton);
+
+        JPanel lol = new JPanel(new BorderLayout());
+        lol.add(optionsPanel, BorderLayout.EAST);
+
+        searchOptionsPanel.add(searchPanel);
+        searchOptionsPanel.add(lol);
+        panel.add(searchOptionsPanel, BorderLayout.PAGE_START);
+
+
+
+
+
+
+
         panel.add(scrollPane, BorderLayout.CENTER);
 
         //Creating bottom part of UI: Document preview and progress bar

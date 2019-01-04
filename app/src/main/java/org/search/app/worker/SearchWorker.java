@@ -18,18 +18,18 @@ public class SearchWorker extends SwingWorker<List<RowFile>, Void> {
     private static final Logger LOG = LoggerFactory.getLogger(SearchWorker.class);
 
     private final SearchEngine searchEngine;
-    private final JTextField searchField;
+    private final String searchQuery;
     private final JSearchResultTable searchResultTable;
 
-    public SearchWorker(SearchEngine searchEngine, JTextField searchField, JSearchResultTable searchResultTable) {
+    public SearchWorker(SearchEngine searchEngine, String searchQuery, JSearchResultTable searchResultTable) {
         this.searchEngine = searchEngine;
-        this.searchField = searchField;
+        this.searchQuery = searchQuery;
         this.searchResultTable = searchResultTable;
     }
 
     @Override
     protected List<RowFile> doInBackground() {
-        return searchEngine.search(searchField.getText()).stream().map(it -> {
+        return searchEngine.search(searchQuery).stream().map(it -> {
             List<RowFile> fileRows = new ArrayList<>();
             for (Map.Entry<Integer, List<Integer>> row: it.getRowNumbers().entrySet()) {
                 fileRows.add(new RowFile(it.getFileName(), row.getKey(), row.getValue()));

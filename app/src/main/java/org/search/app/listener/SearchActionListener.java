@@ -22,7 +22,8 @@ public class SearchActionListener implements ActionListener {
 
     @Override
     public void actionPerformed(ActionEvent e) {
-        SearchWorker worker = new SearchWorker(searchEngine, searchField, searchResultTable);
+        String searchQuery = searchField.getText();
+        SearchWorker worker = new SearchWorker(searchEngine, searchQuery, searchResultTable);
         worker.execute();
     }
 }
