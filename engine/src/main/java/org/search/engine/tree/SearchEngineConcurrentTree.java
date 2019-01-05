@@ -147,11 +147,24 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
         }
 
         SearchResult searchResult = searchTree(key);
-        if (searchResult.classification.equals(Classification.EXACT_MATCH)) {
-            TIntHashSet nodeValues = searchResult.nodeFound.getValue();
-            if (nodeValues != null) {
-                return Arrays.stream(nodeValues.toArray()).boxed().collect(Collectors.toSet());
+        if (searchResult.classification == Classification.EXACT_MATCH ||
+                searchResult.classification == Classification.KEY_ENDS_MID_EDGE) {
+            Queue<TreeNode> nodesQueue = new LinkedList<>();
+            nodesQueue.add(searchResult.nodeFound);
+            TIntHashSet nodeValues = new TIntHashSet();
+            TreeNode currentNode;
+            while ((currentNode = nodesQueue.poll()) != null) {
+                List<TreeNode> childNodes = currentNode.getOutgoingNodes();
+                if (childNodes != null && !childNodes.isEmpty()) {
+                    nodesQueue.addAll(childNodes);
+                }
+
+                TIntHashSet nodeValue = currentNode.getValue();
+                if (nodeValue != null) {
+                    nodeValues.addAll(nodeValue.toArray());
+                }
             }
+            return Arrays.stream(nodeValues.toArray()).boxed().collect(Collectors.toSet());
         }
         return Collections.emptySet();
     }

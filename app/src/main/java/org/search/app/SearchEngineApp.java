@@ -2,7 +2,6 @@ package org.search.app;
 
 import org.fife.ui.rsyntaxtextarea.AbstractTokenMakerFactory;
 import org.fife.ui.rsyntaxtextarea.RSyntaxTextArea;
-import org.fife.ui.rsyntaxtextarea.SyntaxConstants;
 import org.fife.ui.rsyntaxtextarea.TokenMakerFactory;
 import org.fife.ui.rtextarea.RTextScrollPane;
 import org.search.app.component.JSearchResultTable;
@@ -12,10 +11,10 @@ import org.search.app.listener.SearchKeyListener;
 import org.search.app.model.SearchResultTableModel;
 import org.search.app.worker.FolderIndexationWorker;
 import org.search.engine.SearchEngine;
+import org.search.engine.model.SearchType;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.KeyEvent;
 import java.util.Collections;
 
 import static javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED;
@@ -26,6 +25,7 @@ class SearchEngineApp extends JFrame {
     private final SearchEngine searchEngine;
 
     //UI components
+    private ButtonGroup searchOptionsGroup;
     private JButton searchButton;
     private JButton cancelButton;
     private JTextField searchField;
@@ -126,6 +126,7 @@ class SearchEngineApp extends JFrame {
         panel.setBorder(BorderFactory.createEmptyBorder(5, 10, 10, 10));
 
         searchButton = new JButton("Search");
+        searchOptionsGroup = new ButtonGroup();
         searchField = new JTextField();
 
         documentPreview = createDocumentPreviewArea();
@@ -137,51 +138,14 @@ class SearchEngineApp extends JFrame {
         documentPreviewScrollPane.setPreferredSize(new Dimension(0, 150));
         searchResultTable.getSelectionModel().setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         searchResultTable.getSelectionModel().addListSelectionListener(new FileSelectionListener(tableModel,
-                searchResultTable, documentPreview, searchField));
+                searchResultTable, documentPreview));
         final JScrollPane scrollPane = new JScrollPane(searchResultTable, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
-        searchButton.addActionListener(new SearchActionListener(searchEngine, searchField, searchResultTable));
-        searchField.addKeyListener(new SearchKeyListener(searchEngine, searchField, searchResultTable));
+        searchButton.addActionListener(new SearchActionListener(searchEngine, searchField, searchResultTable, searchOptionsGroup));
+        searchField.addKeyListener(new SearchKeyListener(searchEngine, searchField, searchResultTable, searchOptionsGroup));
 
-        //Creating search form
-        JPanel searchOptionsPanel = new JPanel();
-        searchOptionsPanel.setLayout(new BoxLayout(searchOptionsPanel, BoxLayout.Y_AXIS));
-
-        JPanel searchPanel = new JPanel(new BorderLayout());
-        searchPanel.add(searchField, BorderLayout.CENTER);
-        searchPanel.add(searchButton, BorderLayout.EAST);
-
-        JRadioButton birdButton = new JRadioButton("One");
-        birdButton.setMnemonic(KeyEvent.VK_B);
-        birdButton.setActionCommand("One");
-        birdButton.setSelected(true);
-
-        JRadioButton catButton = new JRadioButton("Two");
-        catButton.setMnemonic(KeyEvent.VK_C);
-        catButton.setActionCommand("Two");
-
-        ButtonGroup group = new ButtonGroup();
-        group.add(birdButton);
-        group.add(catButton);
-
-        JPanel optionsPanel = new JPanel();
-        optionsPanel.setLayout(new BoxLayout(optionsPanel, BoxLayout.LINE_AXIS));
-        optionsPanel.add(birdButton);
-        optionsPanel.add(catButton);
-
-        JPanel lol = new JPanel(new BorderLayout());
-        lol.add(optionsPanel, BorderLayout.EAST);
-
-        searchOptionsPanel.add(searchPanel);
-        searchOptionsPanel.add(lol);
-        panel.add(searchOptionsPanel, BorderLayout.PAGE_START);
-
-
-
-
-
-
-
+        //Creating search form with options
+        panel.add(createSearchPanelWithOptions(), BorderLayout.PAGE_START);
         panel.add(scrollPane, BorderLayout.CENTER);
 
         //Creating bottom part of UI: Document preview and progress bar
@@ -196,6 +160,39 @@ class SearchEngineApp extends JFrame {
         panel.add(documentPreviewAndProgressPanel, BorderLayout.PAGE_END);
 
         return panel;
+    }
+
+    private JPanel createSearchPanelWithOptions() {
+        JPanel searchPanelWithOptions = new JPanel();
+        searchPanelWithOptions.setLayout(new BoxLayout(searchPanelWithOptions, BoxLayout.Y_AXIS));
+
+        JPanel searchPanel = new JPanel(new BorderLayout());
+        searchPanel.add(searchField, BorderLayout.CENTER);
+        searchPanel.add(searchButton, BorderLayout.EAST);
+
+        JRadioButton exactMatchButton = new JRadioButton("Exact match");
+        exactMatchButton.setActionCommand(SearchType.EXACT_MATCH.name());
+        exactMatchButton.addActionListener(it -> searchButton.doClick());
+        exactMatchButton.setSelected(true);
+
+        JRadioButton startWithButton = new JRadioButton("Start with");
+        startWithButton.setActionCommand(SearchType.START_WITH.name());
+        startWithButton.addActionListener(it -> searchButton.doClick());
+
+        searchOptionsGroup.add(exactMatchButton);
+        searchOptionsGroup.add(startWithButton);
+
+        JPanel optionsPanel = new JPanel();
+        optionsPanel.setLayout(new BoxLayout(optionsPanel, BoxLayout.LINE_AXIS));
+        optionsPanel.add(exactMatchButton);
+        optionsPanel.add(startWithButton);
+
+        JPanel searchOptionsPanel = new JPanel(new BorderLayout());
+        searchOptionsPanel.add(optionsPanel, BorderLayout.EAST);
+
+        searchPanelWithOptions.add(searchPanel);
+        searchPanelWithOptions.add(searchOptionsPanel);
+        return searchPanelWithOptions;
     }
 
     private void createProgressPanel() {

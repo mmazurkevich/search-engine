@@ -7,6 +7,7 @@ import java.util.List;
 public class SearchResultTableModel extends AbstractTableModel {
 
     private List<RowFile> data = new ArrayList<>();
+    private String searchQuery;
 
     @Override
     public int getRowCount() {
@@ -50,5 +51,13 @@ public class SearchResultTableModel extends AbstractTableModel {
 
     public void setData(List<RowFile> data) {
         this.data = data;
+    }
+
+    public void setSearchQuery(String searchQuery) {
+        this.searchQuery = searchQuery;
+    }
+
+    public String getSearchQuery() {
+        return searchQuery;
     }
 }

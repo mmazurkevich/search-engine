@@ -1,6 +1,7 @@
 package org.search.engine.search;
 
 import org.search.engine.model.SearchResult;
+import org.search.engine.model.SearchType;
 
 import java.util.List;
 
@@ -15,5 +16,5 @@ public interface SearchManager {
      * @param searchQuery Search query which should be searched in the index
      * @return list of matched entities
      */
-    List<SearchResult> searchByQuery(String searchQuery);
+    List<SearchResult> searchByQuery(String searchQuery, SearchType searchType);
 }

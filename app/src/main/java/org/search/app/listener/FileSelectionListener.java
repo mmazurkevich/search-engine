@@ -27,17 +27,14 @@ public class FileSelectionListener implements ListSelectionListener {
     private final SearchResultTableModel tableModel;
     private final JSearchResultTable searchResultTable;
     private final RSyntaxTextArea documentPreview;
-    private final JTextField searchField;
     private final DefaultHighlighter.DefaultHighlightPainter painter;
     private List<Object> previousHighlights = new ArrayList<>();
     private String previousFile;
 
-    public FileSelectionListener(SearchResultTableModel tableModel, JSearchResultTable searchResultTable, RSyntaxTextArea documentPreview,
-                                 JTextField searchField) {
+    public FileSelectionListener(SearchResultTableModel tableModel, JSearchResultTable searchResultTable, RSyntaxTextArea documentPreview) {
         this.tableModel = tableModel;
         this.searchResultTable = searchResultTable;
         this.documentPreview = documentPreview;
-        this.searchField = searchField;
         this.painter = new DefaultHighlighter.DefaultHighlightPainter(Color.YELLOW);
     }
 
@@ -107,7 +104,7 @@ public class FileSelectionListener implements ListSelectionListener {
     }
 
     private void highlightAndScrollRow(int rowNumber, List<Integer> positions) throws BadLocationException {
-        String searchQuery = searchField.getText();
+        String searchQuery = tableModel.getSearchQuery();
         if (!previousHighlights.isEmpty()) {
             previousHighlights.forEach(it -> documentPreview.getHighlighter().removeHighlight(it));
         }

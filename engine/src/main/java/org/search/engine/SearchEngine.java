@@ -7,6 +7,7 @@ import org.search.engine.filesystem.FilesystemNotificationManager;
 import org.search.engine.filesystem.FilesystemNotifier;
 import org.search.engine.index.DocumentIndexManager;
 import org.search.engine.index.IndexationEventListener;
+import org.search.engine.model.SearchType;
 import org.search.engine.search.SearchManager;
 import org.search.engine.model.SearchResult;
 import org.search.engine.search.SimpleSearchManager;
@@ -110,9 +111,9 @@ public class SearchEngine {
      * @param searchQuery The query which should be searched in the index
      * @return The list of documents which contains the searched lexeme
      */
-    public List<SearchResult> search(String searchQuery) {
+    public List<SearchResult> search(String searchQuery, SearchType searchType) {
         if (searchManager != null) {
-            return searchManager.searchByQuery(searchQuery);
+            return searchManager.searchByQuery(searchQuery, searchType);
         } else {
             LOG.warn("Search engine not yet initialized");
             return Collections.emptyList();

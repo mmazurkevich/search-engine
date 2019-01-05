@@ -3,6 +3,7 @@ package org.search.engine.search;
 import org.search.engine.analyzer.Tokenizer;
 import org.search.engine.model.Document;
 import org.search.engine.model.SearchResult;
+import org.search.engine.model.SearchType;
 import org.search.engine.tree.SearchEngineTree;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +20,7 @@ import java.util.stream.Stream;
  * Simple search manager which search by single word and return matched results
  * by mapping them in indexed documents list.
  */
-public class SimpleSearchManager implements SearchManager{
+public class SimpleSearchManager implements SearchManager {
 
     private static final Logger LOG = LoggerFactory.getLogger(SimpleSearchManager.class);
 
@@ -28,7 +29,7 @@ public class SimpleSearchManager implements SearchManager{
     private final Tokenizer tokenizer;
 
 
-    public SimpleSearchManager(SearchEngineTree index,  Map<Path, Document> indexedDocuments, Tokenizer tokenizer) {
+    public SimpleSearchManager(SearchEngineTree index, Map<Path, Document> indexedDocuments, Tokenizer tokenizer) {
         this.index = index;
         this.indexedDocuments = indexedDocuments;
         this.tokenizer = tokenizer;
@@ -38,9 +39,9 @@ public class SimpleSearchManager implements SearchManager{
      * {@inheritDoc}
      */
     @Override
-    public List<SearchResult> searchByQuery(String searchQuery) {
+    public List<SearchResult> searchByQuery(String searchQuery, SearchType searchType) {
         if (searchQuery != null && !searchQuery.isEmpty()) {
-            LOG.debug("Searching documents by query: {}", searchQuery);
+            LOG.debug("Searching documents by query: {} with search type: {}", searchQuery, searchType);
             Set<Integer> value = index.getValue(searchQuery);
             if (!value.isEmpty()) {
                 List<SearchResult> results = indexedDocuments.entrySet().stream()
@@ -55,7 +56,9 @@ public class SimpleSearchManager implements SearchManager{
                                     rowNumber[0]++;
                                     List<Integer> positionsInRow = new ArrayList<>();
                                     tokenizer.tokenize(line).forEach(token -> {
-                                        if (token.getContent().equals(searchQuery)) {
+                                        if (searchType == SearchType.EXACT_MATCH && token.getContent().equals(searchQuery)) {
+                                            positionsInRow.add(token.getPositionInRow());
+                                        } else if (searchType == SearchType.START_WITH && token.getContent().startsWith(searchQuery)) {
                                             positionsInRow.add(token.getPositionInRow());
                                         }
                                     });

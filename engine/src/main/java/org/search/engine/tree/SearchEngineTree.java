@@ -37,14 +37,12 @@ public interface SearchEngineTree {
     Set<String> getKeys(int value);
 
     /**
-     * Get the set of unique identifiers of indexed entity by the certain lexeme.
+     * Get the set of unique identifiers of indexed entity by the certain lexeme which start with.
      *
      * @param key CharSequence of lexeme
      * @return Identifiers of indexed entity containing this lexeme
      */
     Set<Integer> getValue(CharSequence key);
-
-
     /**
      * Method removes value from tree node and if value's list size is less equal one, remove node from tree.
      *
