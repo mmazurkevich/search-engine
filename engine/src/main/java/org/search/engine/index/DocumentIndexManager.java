@@ -91,7 +91,15 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
                     }
 
                     @Override
-                    public FileVisitResult postVisitDirectory(Path folder, IOException exc) {
+                    public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes basicFileAttributes) throws IOException {
+                        if (Files.isHidden(path)) {
+                            return FileVisitResult.SKIP_SUBTREE;
+                        }
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    @Override
+                    public FileVisitResult postVisitDirectory(Path folder, IOException exc) throws IOException {
                         notificationManager.registerFolder(folder);
                         return getFileVisitResult();
                     }
@@ -243,7 +251,16 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
                     }
 
                     @Override
-                    public FileVisitResult postVisitDirectory(Path folder, IOException exc) {
+                    public FileVisitResult preVisitDirectory(Path path, BasicFileAttributes basicFileAttributes) throws IOException {
+                        if (Files.isHidden(path)) {
+                            LOG.debug("Folder hidden and will be skipped {}", path);
+                            return FileVisitResult.SKIP_SUBTREE;
+                        }
+                        return FileVisitResult.CONTINUE;
+                    }
+
+                    @Override
+                    public FileVisitResult postVisitDirectory(Path folder, IOException exc) throws IOException {
                         notificationManager.registerFolder(folder);
                         return FileVisitResult.CONTINUE;
                     }
@@ -337,7 +354,7 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
         long count = 0;
         try (DirectoryStream<Path> dirStream = Files.newDirectoryStream(folderPath)) {
             for (Path path : dirStream) {
-                if (Files.isDirectory(path)) {
+                if (Files.isDirectory(path) && !Files.isHidden(path)) {
                     count += getFilesCount(path);
                 } else {
                     count++;

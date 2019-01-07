@@ -78,7 +78,8 @@ public class SearchEngineInitializer implements IndexationEventListener {
     }
 
     @Override
-    public void onIndexationProgress(int progress) { }
+    public void onIndexationProgress(int progress) {
+    }
 
     AtomicInteger getUniqueDocumentId() {
         return uniqueDocumentId;
@@ -160,7 +161,7 @@ public class SearchEngineInitializer implements IndexationEventListener {
             if (!Files.exists(folder)) {
                 oldFolders.add(folder);
             } else {
-                try (Stream<Path> paths = Files.walk(folder)) {
+                try (Stream<Path> paths = Files.walk(folder, 1)) {
                     paths.forEach(path -> {
                         if (Files.isRegularFile(path)) {
                             checkedFiles.add(path);
@@ -179,10 +180,14 @@ public class SearchEngineInitializer implements IndexationEventListener {
                             }
 
                         }
-                        if (Files.isDirectory(path)) {
-                            if (!trackedFolders.contains(path)) {
-                                newFolders.add(path);
+                        try {
+                            if (Files.isDirectory(path) && !Files.isHidden(path)) {
+                                if (!trackedFolders.contains(path)) {
+                                    newFolders.add(path);
+                                }
                             }
+                        } catch (IOException ex) {
+                            LOG.warn("Exception in checking folder on hidden: {}", path, ex);
                         }
                     });
                 } catch (IOException ex) {
