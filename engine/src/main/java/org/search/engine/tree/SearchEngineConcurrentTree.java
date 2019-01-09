@@ -1,6 +1,7 @@
 package org.search.engine.tree;
 
 import gnu.trove.set.hash.TIntHashSet;
+import org.search.engine.model.SearchType;
 import org.search.engine.tree.util.CharSequencesUtil;
 
 import java.io.IOException;
@@ -25,6 +26,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
     // Lock for modification operations
     private final Lock writeLock = new ReentrantLock();
     private volatile TreeNode root;
+    private SearchTreeTrackChangesListener trackChangesListener;
 
     public SearchEngineConcurrentTree() {
         this.root = createNode("", null, null, Collections.emptyList(), true);
@@ -58,11 +60,15 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
                     // Node already exist and we add new value to already existing list or creating new one with given value
                     final TIntHashSet existingValue = searchResult.nodeFound.getValue();
                     if (existingValue != null) {
-                        existingValue.add(value);
+                        if (!existingValue.contains(value)) {
+                            existingValue.add(value);
+                            notifyListenerLexemeAdded(key.toString(), value);
+                        }
                     } else {
                         TIntHashSet newValues = new TIntHashSet();
                         newValues.add(value);
                         searchResult.nodeFound.setValue(newValues);
+                        notifyListenerLexemeAdded(key.toString(), value);
                     }
                     break;
                 }
@@ -81,6 +87,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
                     newChild.setParent(newParent);
                     searchResult.nodeFound.getOutgoingNodes().forEach(it -> it.setParent(newChild));
                     parentNode.updateOutgoingNode(newParent);
+                    notifyListenerLexemeAdded(key.toString(), value);
                     break;
                 }
                 case INCOMPLETE_MATCH_TO_END_OF_EDGE: {
@@ -106,6 +113,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
                         parentNode.updateOutgoingNode(clonedNode);
                     }
                     edges.forEach(it -> it.setParent(clonedNode));
+                    notifyListenerLexemeAdded(key.toString(), value);
                     break;
                 }
                 case INCOMPLETE_MATCH_TO_MIDDLE_OF_EDGE: {
@@ -129,11 +137,20 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
 
                     n1.setParent(n3);
                     n2.setParent(n3);
+                    notifyListenerLexemeAdded(key.toString(), value);
                     break;
                 }
             }
         } finally {
             writeLock.unlock();
+        }
+    }
+
+    @Override
+    public void update(CharSequence key, int value) {
+        if (trackChangesListener != null && trackChangesListener.getTrackedSearchType() == SearchType.EXACT_MATCH
+                && trackChangesListener.getTrackedLexeme().equals(key.toString())) {
+            trackChangesListener.onTrackedLexemeUpdated(value);
         }
     }
 
@@ -227,6 +244,11 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
         } finally {
             writeLock.unlock();
         }
+
+        if (trackChangesListener != null && trackChangesListener.getTrackedSearchType() == SearchType.EXACT_MATCH
+                && trackChangesListener.getTrackedLexeme().equals(key.toString())) {
+            trackChangesListener.onTrackedLexemeRemoved(value);
+        }
     }
 
     /**
@@ -266,6 +288,13 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
     }
 
     @Override
+    public void setTrackChangesListener(SearchTreeTrackChangesListener listener) {
+        if (listener != null) {
+            trackChangesListener = listener;
+        }
+    }
+
+    @Override
     public void clear() {
         root = createNode("", null, null, Collections.emptyList(), true);
     }
@@ -275,6 +304,15 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
         StringBuilder sb = new StringBuilder();
         prettyPrint(root, sb, "", true, true);
         return sb.toString();
+    }
+
+    private void notifyListenerLexemeAdded(String key, int value) {
+        if (trackChangesListener != null && trackChangesListener.getTrackedSearchType() == SearchType.EXACT_MATCH
+                && trackChangesListener.getTrackedLexeme().equals(key)) {
+//            new Thread(() -> {
+                trackChangesListener.onTrackedLexemeAdd(value);
+//            }).start();
+        }
     }
 
     private TreeNode createNode(CharSequence edgeCharacters, TreeNode parent, TIntHashSet value, List<TreeNode> childNodes, boolean isRoot) {

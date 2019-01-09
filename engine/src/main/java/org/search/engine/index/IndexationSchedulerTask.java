@@ -44,6 +44,9 @@ public class IndexationSchedulerTask implements Runnable {
                         tokenizer.tokenize(indexationEvent.getContent())
                                 .forEach(token -> index.putMergeOnConflict(token.getContent(), documentId));
                         break;
+                    case UPDATE:
+                        index.update(indexationEvent.getContent(), indexationEvent.getDocumentId());
+                        break;
                     case REMOVE:
                         index.removeByKeyAndValue(indexationEvent.getContent(), indexationEvent.getDocumentId());
                         break;

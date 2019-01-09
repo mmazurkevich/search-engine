@@ -1,5 +1,6 @@
 package org.search.engine;
 
+import io.reactivex.subjects.ReplaySubject;
 import org.search.engine.analyzer.StandardTokenizer;
 import org.search.engine.analyzer.Tokenizer;
 import org.search.engine.exception.SearchEngineInitializationException;
@@ -7,9 +8,9 @@ import org.search.engine.filesystem.FilesystemNotificationManager;
 import org.search.engine.filesystem.FilesystemNotifier;
 import org.search.engine.index.DocumentIndexManager;
 import org.search.engine.index.IndexationEventListener;
+import org.search.engine.model.SearchResultEvent;
 import org.search.engine.model.SearchType;
 import org.search.engine.search.SearchManager;
-import org.search.engine.model.SearchResult;
 import org.search.engine.search.SimpleSearchManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,8 +18,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.WatchService;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * The main class of the library for in-memory documents/folders indexation.
@@ -111,12 +110,12 @@ public class SearchEngine {
      * @param searchQuery The query which should be searched in the index
      * @return The list of documents which contains the searched lexeme
      */
-    public List<SearchResult> search(String searchQuery, SearchType searchType) {
+    public ReplaySubject<SearchResultEvent> search(String searchQuery, SearchType searchType) {
         if (searchManager != null) {
             return searchManager.searchByQuery(searchQuery, searchType);
         } else {
             LOG.warn("Search engine not yet initialized");
-            return Collections.emptyList();
+            return null;
         }
     }
 

@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.stream.Stream;
@@ -42,12 +43,14 @@ class DocumentUpdateTask implements Runnable {
 
         //Old tokens which should be removed from index
         Set<String> oldDocumentTokens = index.getKeys(documentId);
+        Set<String> updatedDocumentTokens = new HashSet<>();
 
         try (Stream<String> lines = Files.lines(updatingDocument.getPath())) {
             lines.forEach(line -> tokenizer.tokenize(line).forEach(token -> {
                 String content = token.getContent();
                 if (oldDocumentTokens.contains(content)) {
                     oldDocumentTokens.remove(content);
+                    updatedDocumentTokens.add(content);
                 } else {
                     //It's a new token, should be added to the index
                     try {
@@ -57,6 +60,13 @@ class DocumentUpdateTask implements Runnable {
                     }
                 }
             }));
+            updatedDocumentTokens.forEach(it -> {
+                try {
+                    documentQueue.put(new IndexationEvent(EventType.UPDATE, documentId, it));
+                } catch (InterruptedException ex) {
+                    LOG.warn("Put UPDATE to queue interrupted", ex);
+                }
+            });
             oldDocumentTokens.forEach(it -> {
                 try {
                     documentQueue.put(new IndexationEvent(EventType.REMOVE, documentId, it));

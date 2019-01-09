@@ -16,6 +16,7 @@ import org.search.engine.model.SearchType;
 import javax.swing.*;
 import java.awt.*;
 import java.util.Collections;
+import java.util.List;
 
 import static javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED;
 import static javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED;
@@ -34,16 +35,42 @@ class SearchEngineApp extends JFrame {
     private JPanel progressBarPanel;
     private JLabel progressDescription;
     private JProgressBar progressBar;
+    private FolderIndexationWorker indexationWorker;
 
     SearchEngineApp() {
         this.searchEngine = new SearchEngine();
         initUI();
         //Initialize index in thread for not blocking UI
-        SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+        SwingWorker<Void, String> worker = new SwingWorker<Void, String>() {
+
+            private static final String STARTED = "Started";
+            private static final String FINISHED = "Finished";
             @Override
             protected Void doInBackground() {
+                publish(STARTED);
                 searchEngine.initialize();
+                publish(FINISHED);
                 return null;
+            }
+
+            @Override
+            protected void process(List<String> list) {
+                list.forEach(it -> {
+                    switch (it) {
+                        case STARTED:
+                            cancelButton.setVisible(false);
+                            progressBar.setVisible(false);
+                            progressDescription.setText("Reading index from disk...");
+                            progressBarPanel.setVisible(true);
+                            break;
+                        case FINISHED:
+                            cancelButton.setVisible(true);
+                            progressBar.setVisible(true);
+                            progressDescription.setText("");
+                            progressBarPanel.setVisible(false);
+                            break;
+                    }
+                });
             }
         };
         worker.execute();
@@ -72,7 +99,7 @@ class SearchEngineApp extends JFrame {
             chooser.setDialogTitle("Select folder for indexation");
 
             if (chooser.showDialog(this, "Index") == JFileChooser.APPROVE_OPTION) {
-                FolderIndexationWorker indexationWorker = new FolderIndexationWorker(searchEngine, progressBarPanel, progressBar, progressDescription,
+                indexationWorker = new FolderIndexationWorker(searchEngine, progressBarPanel, progressBar, progressDescription,
                         chooser.getSelectedFile().getPath(), folderIndexMenuItem);
                 folderIndexMenuItem.setEnabled(false);
                 progressBarPanel.setVisible(true);
@@ -203,6 +230,7 @@ class SearchEngineApp extends JFrame {
                 @Override
                 protected Void doInBackground() {
                     searchEngine.cancelFolderIndexation();
+                    indexationWorker.cancel();
                     return null;
                 }
             };

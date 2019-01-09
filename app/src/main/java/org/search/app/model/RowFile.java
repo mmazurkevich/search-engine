@@ -25,4 +25,8 @@ public class RowFile {
     public List<Integer> getPositions() {
         return positions;
     }
+
+    public void setPositions(List<Integer> positions) {
+        this.positions = positions;
+    }
 }

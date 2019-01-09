@@ -1,5 +1,6 @@
 package org.search.app.model;
 
+
 import javax.swing.table.AbstractTableModel;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,6 +52,10 @@ public class SearchResultTableModel extends AbstractTableModel {
 
     public void setData(List<RowFile> data) {
         this.data = data;
+    }
+
+    public List<RowFile> getData() {
+        return data;
     }
 
     public void setSearchQuery(String searchQuery) {

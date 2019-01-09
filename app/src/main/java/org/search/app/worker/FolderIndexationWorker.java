@@ -14,6 +14,7 @@ public class FolderIndexationWorker extends SwingWorker<Void, Integer> implement
     private final String folderPath;
     private final JMenuItem menuItem;
     private final JLabel progressDescription;
+    private boolean isCanceled;
 
     public FolderIndexationWorker(SearchEngine searchEngine, JPanel progressBarPanel, JProgressBar progressBar, JLabel progressDescription,
                                   String folderPath, JMenuItem menuItem) {
@@ -35,7 +36,7 @@ public class FolderIndexationWorker extends SwingWorker<Void, Integer> implement
     protected void process(List<Integer> list) {
         list.forEach(it -> {
             if (it >= 0 && it < 100) {
-                if (!progressBarPanel.isVisible()) {
+                if (!progressBarPanel.isVisible() && !isCanceled) {
                     progressBarPanel.setVisible(true);
                 }
                 progressDescription.setText("Indexation");
@@ -56,5 +57,9 @@ public class FolderIndexationWorker extends SwingWorker<Void, Integer> implement
     @Override
     public void onIndexationFinished() {
         publish(-1);
+    }
+
+    public void cancel() {
+        isCanceled = true;
     }
 }

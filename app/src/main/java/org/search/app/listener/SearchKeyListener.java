@@ -31,6 +31,7 @@ public class SearchKeyListener implements KeyListener {
     private final ButtonGroup searchOptionsGroup;
     private final SpellCheckPainter painter;
     private HunspellCheck hunspellCheck = null;
+    private SearchWorker searchWorker;
 
     public SearchKeyListener(SearchEngine searchEngine, JTextField searchField, JSearchResultTable searchResultTable,
                              ButtonGroup searchOptionsGroup) {
@@ -56,16 +57,19 @@ public class SearchKeyListener implements KeyListener {
 
     @Override
     public void keyReleased(KeyEvent e) {
-        handleKeyEvent(e.getKeyCode());
+        if (!invalidKeys.contains(e.getKeyCode())) {
+            handleEvent();
+        }
     }
 
-    private void handleKeyEvent(int eventCode) {
-        if (!invalidKeys.contains(eventCode)) {
-            String searchQuery = searchField.getText();
-            spellCheck(searchQuery);
-            SearchWorker worker = new SearchWorker(searchEngine, searchQuery, searchResultTable, searchOptionsGroup);
-            worker.execute();
+    private void handleEvent() {
+        String searchQuery = searchField.getText();
+        spellCheck(searchQuery);
+        if (searchWorker != null && !searchWorker.isDone()) {
+            searchWorker.cancel(false);
         }
+        searchWorker = new SearchWorker(searchEngine, searchQuery, searchResultTable, searchOptionsGroup);
+        searchWorker.execute();
     }
 
     private void spellCheck(String searchQuery) {
@@ -84,7 +88,7 @@ public class SearchKeyListener implements KeyListener {
                     JMenuItem menuItem = new JMenuItem(it);
                     menuItem.addActionListener(actionEvent -> {
                         searchField.setText(it);
-                        handleKeyEvent(VK_ENTER);
+                        handleEvent();
                     });
                     popup.add(menuItem);
                 });

@@ -26,6 +26,8 @@ public interface SearchEngineTree {
      */
     void putMergeOnConflict(CharSequence key, int value);
 
+    void update(CharSequence key, int value);
+
     /**
      * Get set of lexeme indexed by the certain value. Dictionary of indexed document.
      * It used for comparing old and new document during document modification to avoid redundant
@@ -65,6 +67,8 @@ public interface SearchEngineTree {
      * @return number of nodes with value in the tree
      */
     int size();
+
+    void setTrackChangesListener(SearchTreeTrackChangesListener listener);
 
     void clear();
 }
