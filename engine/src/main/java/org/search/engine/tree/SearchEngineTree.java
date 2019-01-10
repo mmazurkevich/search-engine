@@ -1,5 +1,7 @@
 package org.search.engine.tree;
 
+import org.search.engine.model.SearchType;
+
 import java.util.Set;
 
 /**
@@ -44,7 +46,7 @@ public interface SearchEngineTree {
      * @param key CharSequence of lexeme
      * @return Identifiers of indexed entity containing this lexeme
      */
-    Set<Integer> getValue(CharSequence key);
+    Set<Integer> getValue(CharSequence key, SearchType searchType);
     /**
      * Method removes value from tree node and if value's list size is less equal one, remove node from tree.
      *

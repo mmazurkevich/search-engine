@@ -55,12 +55,13 @@ public class SimpleSearchManager implements SearchManager, SearchTreeTrackChange
         documentMatchedRowsList = new ArrayList<>();
         if (searchQuery != null && !searchQuery.isEmpty()) {
             LOG.debug("Searching documents by query: {} with search type: {}", searchQuery, searchType);
-            Set<Integer> value = index.getValue(searchQuery);
+            Set<Integer> value = index.getValue(searchQuery, searchType);
             if (!value.isEmpty()) {
                 documentMatchedRowsList = indexedDocuments.entrySet().stream()
                         .filter(entry -> value.contains(entry.getValue().getId()))
                         .filter(entry -> Files.exists(entry.getValue().getPath()))
                         .map(entry -> getDocumentMatchedRows(entry.getValue().getId(), entry.getValue().getPath()))
+                        .filter(it -> !it.rowNumbers.isEmpty())
                         .limit(100)
                         .collect(Collectors.toList());
                 LOG.debug("Found documents: {}", documentMatchedRowsList.size());
@@ -175,7 +176,7 @@ public class SimpleSearchManager implements SearchManager, SearchTreeTrackChange
                 }
             });
         } catch (IOException | UncheckedIOException ex) {
-            LOG.warn("Finding matched rows in file : {} finished with exception", filePath);
+            LOG.warn("Detecting possible matched rows in file : {} finished with exception", filePath);
         }
         return new DocumentMatchedRows(documentId, filePath, matchedRows);
     }

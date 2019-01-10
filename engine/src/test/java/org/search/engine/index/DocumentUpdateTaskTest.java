@@ -7,6 +7,7 @@ import org.search.engine.analyzer.StandardTokenizer;
 import org.search.engine.analyzer.Tokenizer;
 import org.search.engine.model.Document;
 import org.search.engine.model.IndexationEvent;
+import org.search.engine.model.SearchType;
 import org.search.engine.tree.SearchEngineConcurrentTree;
 
 import java.io.IOException;
@@ -59,7 +60,7 @@ public class DocumentUpdateTaskTest extends AbstractDocumentIndexationTest {
         assertEquals(6, index.size());
 
         String searchQuery = "another";
-        Set<Integer> searchResult = index.getValue(searchQuery);
+        Set<Integer> searchResult = index.getValue(searchQuery, SearchType.EXACT_MATCH);
         assertTrue(searchResult.isEmpty());
 
         Files.write(filePath, Collections.singletonList(" another thing"), StandardCharsets.UTF_8,
@@ -68,7 +69,7 @@ public class DocumentUpdateTaskTest extends AbstractDocumentIndexationTest {
         scheduler.run();
 
         assertEquals(8, index.size());
-        searchResult = index.getValue(searchQuery);
+        searchResult = index.getValue(searchQuery, SearchType.EXACT_MATCH);
         assertEquals(1, searchResult.size());
     }
 

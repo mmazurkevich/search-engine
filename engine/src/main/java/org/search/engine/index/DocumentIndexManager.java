@@ -58,6 +58,7 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
         applyIndexChangesIfNeeded(indexChanges);
         notificationManager.addListener(this);
         scheduleIndexationIfNeeded();
+        listeners.add(this);
     }
 
     /**
@@ -78,7 +79,6 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
                     notificationManager.registerParentFolder(folderPath.getParent());
                 }
 
-                listeners.add(this);
                 currentIndexationTracker = new IndexationTracker(listener, folderPath);
                 LOG.info("Calculating overall files count");
                 double percentage = (double) getFilesCount(folderPath) / 100;
@@ -211,8 +211,6 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
     public void onIndexationFinished() {
         if (currentIndexationTracker != null) {
             currentIndexationTracker.getListener().onIndexationFinished();
-            currentIndexationTracker = null;
-            listeners.remove(this);
         }
     }
 

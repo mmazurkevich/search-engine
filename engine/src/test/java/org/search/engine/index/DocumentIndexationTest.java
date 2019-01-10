@@ -8,6 +8,7 @@ import org.search.engine.analyzer.StandardTokenizer;
 import org.search.engine.filesystem.FilesystemNotifier;
 import org.search.engine.model.Document;
 import org.search.engine.model.IndexationEvent;
+import org.search.engine.model.SearchType;
 import org.search.engine.tree.SearchEngineConcurrentTree;
 
 import java.net.URISyntaxException;
@@ -57,7 +58,7 @@ public class DocumentIndexationTest extends AbstractDocumentIndexationTest {
         assertEquals(1, indexedDocuments.size());
         assertTrue(indexedDocuments.containsValue(indexingDocument));
 
-        Set<Integer> searchResult = index.getValue(searchQuery);
+        Set<Integer> searchResult = index.getValue(searchQuery, SearchType.EXACT_MATCH);
         assertEquals(1, searchResult.size());
         assertTrue(searchResult.contains(documentId));
     }

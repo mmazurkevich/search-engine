@@ -149,7 +149,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
     @Override
     public void update(CharSequence key, int value) {
         if (trackChangesListener != null && trackChangesListener.getTrackedSearchType() == SearchType.EXACT_MATCH
-                && trackChangesListener.getTrackedLexeme().equals(key.toString())) {
+                && !trackChangesListener.getTrackedLexeme().isEmpty() && trackChangesListener.getTrackedLexeme().equals(key.toString())) {
             trackChangesListener.onTrackedLexemeUpdated(value);
         }
     }
@@ -158,30 +158,38 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
      * {@inheritDoc}
      */
     @Override
-    public Set<Integer> getValue(CharSequence key) {
+    public Set<Integer> getValue(CharSequence key, SearchType searchType) {
         if (key == null) {
             throw new IllegalArgumentException("The key argument was null or zero-length");
         }
 
         SearchResult searchResult = searchTree(key);
-        if (searchResult.classification == Classification.EXACT_MATCH ||
-                searchResult.classification == Classification.KEY_ENDS_MID_EDGE) {
-            Queue<TreeNode> nodesQueue = new LinkedList<>();
-            nodesQueue.add(searchResult.nodeFound);
-            TIntHashSet nodeValues = new TIntHashSet();
-            TreeNode currentNode;
-            while ((currentNode = nodesQueue.poll()) != null) {
-                List<TreeNode> childNodes = currentNode.getOutgoingNodes();
-                if (childNodes != null && !childNodes.isEmpty()) {
-                    nodesQueue.addAll(childNodes);
-                }
-
-                TIntHashSet nodeValue = currentNode.getValue();
-                if (nodeValue != null) {
-                    nodeValues.addAll(nodeValue.toArray());
-                }
+        if (searchType == SearchType.EXACT_MATCH) {
+            if (searchResult.classification == Classification.EXACT_MATCH) {
+                if (searchResult.nodeFound.getValue() != null)
+                    return Arrays.stream(searchResult.nodeFound.getValue().toArray()).boxed().collect(Collectors.toSet());
+                return Collections.emptySet();
             }
-            return Arrays.stream(nodeValues.toArray()).boxed().collect(Collectors.toSet());
+        } else {
+            if (searchResult.classification == Classification.EXACT_MATCH ||
+                    searchResult.classification == Classification.KEY_ENDS_MID_EDGE) {
+                Queue<TreeNode> nodesQueue = new LinkedList<>();
+                nodesQueue.add(searchResult.nodeFound);
+                TIntHashSet nodeValues = new TIntHashSet();
+                TreeNode currentNode;
+                while ((currentNode = nodesQueue.poll()) != null) {
+                    List<TreeNode> childNodes = currentNode.getOutgoingNodes();
+                    if (childNodes != null && !childNodes.isEmpty()) {
+                        nodesQueue.addAll(childNodes);
+                    }
+
+                    TIntHashSet nodeValue = currentNode.getValue();
+                    if (nodeValue != null) {
+                        nodeValues.addAll(nodeValue.toArray());
+                    }
+                }
+                return Arrays.stream(nodeValues.toArray()).boxed().collect(Collectors.toSet());
+            }
         }
         return Collections.emptySet();
     }
@@ -246,7 +254,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
         }
 
         if (trackChangesListener != null && trackChangesListener.getTrackedSearchType() == SearchType.EXACT_MATCH
-                && trackChangesListener.getTrackedLexeme().equals(key.toString())) {
+                && !trackChangesListener.getTrackedLexeme().isEmpty() && trackChangesListener.getTrackedLexeme().equals(key.toString())) {
             trackChangesListener.onTrackedLexemeRemoved(value);
         }
     }
@@ -308,7 +316,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
 
     private void notifyListenerLexemeAdded(String key, int value) {
         if (trackChangesListener != null && trackChangesListener.getTrackedSearchType() == SearchType.EXACT_MATCH
-                && trackChangesListener.getTrackedLexeme().equals(key)) {
+                && !trackChangesListener.getTrackedLexeme().isEmpty() && trackChangesListener.getTrackedLexeme().equals(key)) {
 //            new Thread(() -> {
                 trackChangesListener.onTrackedLexemeAdd(value);
 //            }).start();

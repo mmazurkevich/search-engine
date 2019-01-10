@@ -2,6 +2,7 @@ package org.search.engine.tree;
 
 import org.junit.Before;
 import org.junit.Test;
+import org.search.engine.model.SearchType;
 
 import java.util.Set;
 
@@ -89,8 +90,8 @@ public class SearchEngineTreeTest {
         tree.putMergeOnConflict("FOO", 1);
         tree.putMergeOnConflict("FOO", 2);
 
-        assertTrue(tree.getValue("FOO").contains(1));
-        assertTrue(tree.getValue("FOO").contains(2));
+        assertTrue(tree.getValue("FOO", SearchType.EXACT_MATCH).contains(1));
+        assertTrue(tree.getValue("FOO", SearchType.EXACT_MATCH).contains(2));
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -129,13 +130,13 @@ public class SearchEngineTreeTest {
         tree.putMergeOnConflict("TEAM", 2);
         tree.putMergeOnConflict("TOAST", 3);
 
-        assertTrue(tree.getValue("TEST").contains(1));
-        assertTrue(tree.getValue("TEAM").contains(2));
-        assertTrue(tree.getValue("TOAST").contains(3));
-        assertTrue(tree.getValue("T").contains(3));
-        assertTrue(tree.getValue("TE").contains(2));
-        assertTrue(tree.getValue("").contains(2));
-        assertTrue(tree.getValue("E").isEmpty());
+        assertTrue(tree.getValue("TEST", SearchType.EXACT_MATCH).contains(1));
+        assertTrue(tree.getValue("TEAM", SearchType.EXACT_MATCH).contains(2));
+        assertTrue(tree.getValue("TOAST", SearchType.EXACT_MATCH).contains(3));
+        assertTrue(tree.getValue("T", SearchType.EXACT_MATCH).isEmpty());
+        assertTrue(tree.getValue("TE", SearchType.EXACT_MATCH).isEmpty());
+        assertTrue(tree.getValue("", SearchType.EXACT_MATCH).isEmpty());
+        assertTrue(tree.getValue("E", SearchType.EXACT_MATCH).isEmpty());
     }
 
     @Test

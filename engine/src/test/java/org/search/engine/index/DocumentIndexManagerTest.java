@@ -9,6 +9,7 @@ import org.search.engine.filesystem.FilesystemEvent;
 import org.search.engine.filesystem.FilesystemNotificationManager;
 import org.search.engine.filesystem.FilesystemNotifier;
 import org.search.engine.model.Document;
+import org.search.engine.model.SearchType;
 import org.search.engine.tree.SearchEngineConcurrentTree;
 import org.search.engine.tree.SearchEngineTree;
 
@@ -71,7 +72,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
         assertEquals(1, indexedDocuments.size());
 
         waitForSize(index, 7);
-        Set<Integer> searchResult = index.getValue(searchQuery);
+        Set<Integer> searchResult = index.getValue(searchQuery, SearchType.EXACT_MATCH);
         assertEquals(1, searchResult.size());
         assertTrue(searchResult.contains(documentId));
     }
@@ -102,14 +103,14 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
 
         waitForSize(index, 2);
         assertEquals(2, index.size());
-        Set<Integer> searchResult = index.getValue("example");
+        Set<Integer> searchResult = index.getValue("example", SearchType.EXACT_MATCH);
         assertEquals(1, searchResult.size());
 
         Files.write(createdFile, Collections.singletonList(searchQuery), StandardCharsets.UTF_8, StandardOpenOption.APPEND);
         new Thread(() -> indexManager.onFileChanged(FilesystemEvent.MODIFIED, createdFile)).start();
 
         waitForSize(index, 3);
-        searchResult = index.getValue(searchQuery);
+        searchResult = index.getValue(searchQuery, SearchType.EXACT_MATCH);
         assertEquals(1, searchResult.size());
     }
 
@@ -138,7 +139,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
         String searchQuery = "mila";
 
         waitForSize(index, 11);
-        Set<Integer> searchResult = index.getValue(searchQuery);
+        Set<Integer> searchResult = index.getValue(searchQuery, SearchType.EXACT_MATCH);
         assertEquals(2, searchResult.size());
         assertTrue(searchResult.contains(1));
         assertTrue(searchResult.contains(2));
@@ -162,7 +163,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
         assertEquals(3, indexedDocuments.size());
 
         waitForSize(index, 12);
-        Set<Integer> searchResult = index.getValue(searchQuery);
+        Set<Integer> searchResult = index.getValue(searchQuery, SearchType.EXACT_MATCH);
         assertEquals(1, searchResult.size());
     }
 
@@ -181,7 +182,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
         assertEquals(1, indexedDocuments.size());
 
         waitForSize(index, 1);
-        Set<Integer> searchResult = index.getValue(searchQuery);
+        Set<Integer> searchResult = index.getValue(searchQuery, SearchType.EXACT_MATCH);
         assertEquals(1, searchResult.size());
 
         indexManager.onFolderChanged(FilesystemEvent.DELETED, createdFolder);
@@ -190,7 +191,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
         assertTrue(indexedDocuments.isEmpty());
 
         waitForSize(index, 0);
-        searchResult = index.getValue(searchQuery);
+        searchResult = index.getValue(searchQuery, SearchType.EXACT_MATCH);
         assertTrue(searchResult.isEmpty());
     }
 

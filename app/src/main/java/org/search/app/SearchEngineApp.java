@@ -62,12 +62,14 @@ class SearchEngineApp extends JFrame {
                             progressBar.setVisible(false);
                             progressDescription.setText("Reading index from disk...");
                             progressBarPanel.setVisible(true);
+                            searchField.setEditable(false);
                             break;
                         case FINISHED:
                             cancelButton.setVisible(true);
                             progressBar.setVisible(true);
                             progressDescription.setText("");
                             progressBarPanel.setVisible(false);
+                            searchField.setEditable(true);
                             break;
                     }
                 });

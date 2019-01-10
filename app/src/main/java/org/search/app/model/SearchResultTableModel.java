@@ -35,8 +35,12 @@ public class SearchResultTableModel extends AbstractTableModel {
     public String getValueAt(int rowIndex, int columnIndex) {
         switch (columnIndex) {
             case 1:
+                if (rowIndex >= data.size())
+                    return "";
                 return String.valueOf(data.get(rowIndex).getRowNumber());
             default:
+                if (rowIndex >= data.size())
+                    return "";
                 return data.get(rowIndex).getFilePath();
         }
     }

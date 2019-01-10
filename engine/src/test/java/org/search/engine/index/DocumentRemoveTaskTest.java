@@ -8,6 +8,7 @@ import org.search.engine.analyzer.StandardTokenizer;
 import org.search.engine.filesystem.FilesystemNotifier;
 import org.search.engine.model.Document;
 import org.search.engine.model.IndexationEvent;
+import org.search.engine.model.SearchType;
 import org.search.engine.tree.SearchEngineConcurrentTree;
 
 import java.net.URISyntaxException;
@@ -51,7 +52,7 @@ public class DocumentRemoveTaskTest extends AbstractDocumentIndexationTest {
     public void testDocumentRemoveFromIndex() {
         assertEquals(7, index.size());
 
-        Set<Integer> searchResult = index.getValue(searchQuery);
+        Set<Integer> searchResult = index.getValue(searchQuery, SearchType.EXACT_MATCH);
         assertEquals(1, searchResult.size());
 
         removeTask.run();
@@ -61,7 +62,7 @@ public class DocumentRemoveTaskTest extends AbstractDocumentIndexationTest {
         assertEquals(0, index.size());
         assertEquals(0, indexedDocuments.size());
 
-        searchResult = index.getValue(searchQuery);
+        searchResult = index.getValue(searchQuery, SearchType.EXACT_MATCH);
         assertTrue(searchResult.isEmpty());
     }
 
