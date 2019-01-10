@@ -1,16 +1,18 @@
 package org.search.engine;
 
+import io.reactivex.subjects.ReplaySubject;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.search.engine.analyzer.WhitespaceTokenizer;
 import org.search.engine.index.IndexationEventListener;
-import org.search.engine.model.SearchResult;
+import org.search.engine.model.SearchResultEvent;
+import org.search.engine.model.SearchType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -33,20 +35,7 @@ public class SearchEngineTest {
     public void setUp() {
         searchEngine = new SearchEngine(new WhitespaceTokenizer());
         searchEngine.initialize();
-    }
-
-    @Ignore
-    @Test
-    public void testDocumentIndexationAndSearch() throws URISyntaxException, InterruptedException {
-        URL resource = SearchEngineTest.class.getResource("/TestFileOne.txt");
-        searchEngine.indexFile(resource.toURI().getRawPath());
-
-        Thread.sleep(2000);
-
-        String searchQuery = "relieve";
-        List<SearchResult> searchResult = searchEngine.search(searchQuery);
-        assertEquals(1, searchResult.size());
-        LOG.debug("Document: {}", searchResult.get(0));
+        searchEngine.invalidateCache();
     }
 
     @Test
@@ -57,8 +46,25 @@ public class SearchEngineTest {
         Thread.sleep(2000);
 
         String searchQuery = "mila";
-        List<SearchResult> searchResult = searchEngine.search(searchQuery);
-        assertEquals(2, searchResult.size());
-        LOG.debug("Document1: {}, Document2: {}", searchResult.get(0), searchResult.get(1));
+        ReplaySubject<SearchResultEvent> replaySubject = searchEngine.search(searchQuery, SearchType.EXACT_MATCH);
+
+        List<SearchResultEvent> results = new ArrayList<>();
+        replaySubject.subscribe(results::add);
+        assertEquals(2, results.size());
+        LOG.debug("Document1: {}, Document2: {}", results.get(0).getFileName(), results.get(1).getFileName());
+
+        resource = SearchEngineTest.class.getResource("/TestFileOne.txt");
+        searchEngine.indexFile(resource.toURI().getRawPath());
+
+        Thread.sleep(2000);
+
+        searchQuery = "relieve";
+        replaySubject = searchEngine.search(searchQuery, SearchType.EXACT_MATCH);
+
+        results = new ArrayList<>();
+        replaySubject.subscribe(results::add);
+        assertEquals(1, results.size());
+        LOG.debug("Document: {}", results.get(0).getFileName());
+        searchEngine.invalidateCache();
     }
 }

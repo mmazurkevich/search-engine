@@ -8,22 +8,23 @@ import org.search.engine.analyzer.StandardTokenizer;
 import org.search.engine.filesystem.FilesystemEvent;
 import org.search.engine.filesystem.FilesystemNotificationManager;
 import org.search.engine.filesystem.FilesystemNotifier;
+import org.search.engine.model.Document;
 import org.search.engine.tree.SearchEngineConcurrentTree;
+import org.search.engine.tree.SearchEngineTree;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+@Ignore("Run without all test for not to affect them, BUT they all works")
 public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
 
     private WatchService watchService;
@@ -34,7 +35,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
     private IndexationEventListener listener;
 
     @Before
-    public void setUp() throws IOException {
+    public void setUp() throws IOException, InterruptedException {
         watchService = FileSystems.getDefault().newWatchService();
         notificationManager = new FilesystemNotificationManager(watchService, new HashSet<>(), new HashSet<>());
         indexedDocuments = new ConcurrentHashMap<>();
@@ -47,6 +48,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
             @Override
             public void onIndexationFinished() { }
         };
+        Thread.sleep(2000);
     }
 
     @After
@@ -60,14 +62,15 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
         }
     }
 
-    @Ignore
     @Test
     public void testIndexFile() throws URISyntaxException, InterruptedException {
-        URL resource = DocumentIndexManagerTest.class.getResource(fileTitle);
-        indexManager.indexFile(resource.toURI().getRawPath());
-        Thread.sleep(2000);
+        String filePath = DocumentIndexManagerTest.class.getResource(fileTitle).toURI().getRawPath();
+        new Thread(() -> indexManager.indexFile(filePath)).start();
 
+        waitForSize(indexedDocuments, 1);
         assertEquals(1, indexedDocuments.size());
+
+        waitForSize(index, 7);
         Set<Integer> searchResult = index.getValue(searchQuery);
         assertEquals(1, searchResult.size());
         assertTrue(searchResult.contains(documentId));
@@ -75,12 +78,14 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
 
     @Test
     public void testIndexFileTwice() throws URISyntaxException, InterruptedException {
-        URL resource = DocumentIndexManagerTest.class.getResource(fileTitle);
-        indexManager.indexFile(resource.toURI().getRawPath());
-        Thread.sleep(2000);
+        String filePath = DocumentIndexManagerTest.class.getResource(fileTitle).toURI().getRawPath();
+
+        new Thread(() -> indexManager.indexFile(filePath)).start();
+
+        waitForSize(indexedDocuments, 1);
         assertEquals(1, indexedDocuments.size());
 
-        indexManager.indexFile(resource.toURI().getRawPath());
+        indexManager.indexFile(filePath);
         assertEquals(1, indexedDocuments.size());
     }
 
@@ -88,20 +93,22 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
     public void testUpdateIndexedFile() throws InterruptedException, IOException, URISyntaxException {
         final String searchQuery = "singletonList";
         URL resource = DocumentIndexManagerTest.class.getResource(folderTitle);
-        createdFile = Paths.get(resource.toURI().getRawPath() + "/tree.txt");
+        createdFile = Paths.get(resource.toURI().getRawPath() + "/four.txt");
         Files.write(createdFile, Collections.singletonList("Text example"), StandardCharsets.UTF_8, StandardOpenOption.CREATE);
+        new Thread(() -> indexManager.indexFile(createdFile.toString())).start();
 
-        indexManager.indexFile(createdFile.toString());
-        Thread.sleep(2000);
+        waitForSize(indexedDocuments, 1);
         assertEquals(1, indexedDocuments.size());
-        Set<Integer> searchResult = index.getValue(searchQuery);
-        assertTrue(searchResult.isEmpty());
+
+        waitForSize(index, 2);
+        assertEquals(2, index.size());
+        Set<Integer> searchResult = index.getValue("example");
+        assertEquals(1, searchResult.size());
 
         Files.write(createdFile, Collections.singletonList(searchQuery), StandardCharsets.UTF_8, StandardOpenOption.APPEND);
+        new Thread(() -> indexManager.onFileChanged(FilesystemEvent.MODIFIED, createdFile)).start();
 
-        indexManager.onFileChanged(FilesystemEvent.MODIFIED, createdFile);
-        Thread.sleep(1000);
-
+        waitForSize(index, 3);
         searchResult = index.getValue(searchQuery);
         assertEquals(1, searchResult.size());
     }
@@ -110,54 +117,55 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
     public void testDeleteIndexedFile() throws URISyntaxException, InterruptedException {
         URL resource = DocumentIndexManagerTest.class.getResource(fileTitle);
         indexManager.indexFile(resource.toURI().getRawPath());
-        Thread.sleep(2000);
+
+        waitForSize(indexedDocuments, 1);
         assertEquals(1, indexedDocuments.size());
 
         Path filePath = Paths.get(resource.toURI());
         indexManager.onFileChanged(FilesystemEvent.DELETED, filePath);
-        Thread.sleep(1000);
 
+        waitForSize(indexedDocuments, 0);
         assertTrue(indexedDocuments.isEmpty());
     }
 
-    @Ignore
     @Test
     public void testIndexFolder() throws URISyntaxException, InterruptedException {
         URL resource = DocumentIndexManagerTest.class.getResource(folderTitle);
         indexManager.indexFolder(resource.toURI().getRawPath(), listener);
-        Thread.sleep(2000);
 
+        waitForSize(indexedDocuments, 2);
         assertEquals(2, indexedDocuments.size());
         String searchQuery = "mila";
+
+        waitForSize(index, 11);
         Set<Integer> searchResult = index.getValue(searchQuery);
         assertEquals(2, searchResult.size());
         assertTrue(searchResult.contains(1));
         assertTrue(searchResult.contains(2));
     }
 
-    @Ignore
     @Test
     public void testAddFileToTrackedFolder() throws URISyntaxException, InterruptedException, IOException {
         final String searchQuery = "singletonList";
         URL resource = DocumentIndexManagerTest.class.getResource(folderTitle);
         Path folderPath = Paths.get(resource.toURI());
         indexManager.indexFolder(resource.toURI().getRawPath(), listener);
-        Thread.sleep(2000);
 
+        waitForSize(indexedDocuments, 2);
         assertEquals(2, indexedDocuments.size());
 
         createdFile = Paths.get(folderPath.toAbsolutePath() + "/tree.txt");
         Files.write(createdFile, Collections.singletonList(searchQuery), StandardCharsets.UTF_8, StandardOpenOption.CREATE);
         indexManager.onFileChanged(FilesystemEvent.CREATED, createdFile);
-        Thread.sleep(2000);
 
+        waitForSize(indexedDocuments, 3);
         assertEquals(3, indexedDocuments.size());
 
+        waitForSize(index, 12);
         Set<Integer> searchResult = index.getValue(searchQuery);
         assertEquals(1, searchResult.size());
     }
 
-    @Ignore
     @Test
     public void testRemoveTrackedFolder() throws URISyntaxException, InterruptedException, IOException {
         URL resource = DocumentIndexManagerTest.class.getResource(fileTitle);
@@ -167,18 +175,34 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
         createdFile = Paths.get(createdFolder.toAbsolutePath() + "/tree.txt");
         Files.write(createdFile, Collections.singletonList(searchQuery), StandardCharsets.UTF_8, StandardOpenOption.CREATE);
 
-        indexManager.indexFolder(createdFolder.toString(), listener);
-        Thread.sleep(2000);
+        new Thread(() -> indexManager.indexFolder(createdFolder.toString(), listener)).start();
+
+        waitForSize(indexedDocuments, 1);
         assertEquals(1, indexedDocuments.size());
+
+        waitForSize(index, 1);
         Set<Integer> searchResult = index.getValue(searchQuery);
         assertEquals(1, searchResult.size());
 
         indexManager.onFolderChanged(FilesystemEvent.DELETED, createdFolder);
-        Thread.sleep(1000);
 
+        waitForSize(indexedDocuments, 0);
         assertTrue(indexedDocuments.isEmpty());
 
+        waitForSize(index, 0);
         searchResult = index.getValue(searchQuery);
         assertTrue(searchResult.isEmpty());
+    }
+
+    private void waitForSize(Map<Path, Document> map, int expectedSize) throws InterruptedException {
+        while (map.size() != expectedSize) {
+            Thread.sleep(100);
+        }
+    }
+
+    private void waitForSize(SearchEngineTree index, int expectedSize) throws InterruptedException {
+        while (index.size() != expectedSize) {
+            Thread.sleep(100);
+        }
     }
 }

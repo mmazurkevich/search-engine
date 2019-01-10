@@ -127,11 +127,7 @@ public class SimpleSearchManager implements SearchManager, SearchTreeTrackChange
                     subject.onNext(new SearchResultEvent(fileName, key, value, EventType.ADD));
                 } else {
                     //Update old rows with new positions
-                    List<Integer> oldPositions = oldRowNumbers.get(key);
-                    long count = value.stream().filter(oldPositions::contains).count();
-                    if (oldPositions.size() != count || value.size() != count) {
-                        subject.onNext(new SearchResultEvent(fileName, key, value, EventType.UPDATE));
-                    }
+                    subject.onNext(new SearchResultEvent(fileName, key, value, EventType.UPDATE));
                     oldRowNumbers.remove(key);
                 }
             });

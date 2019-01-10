@@ -132,10 +132,10 @@ public class SearchEngineTreeTest {
         assertTrue(tree.getValue("TEST").contains(1));
         assertTrue(tree.getValue("TEAM").contains(2));
         assertTrue(tree.getValue("TOAST").contains(3));
-        assertTrue(tree.getValue("T").isEmpty());
-        assertTrue(tree.getValue("TE").isEmpty());
+        assertTrue(tree.getValue("T").contains(3));
+        assertTrue(tree.getValue("TE").contains(2));
+        assertTrue(tree.getValue("").contains(2));
         assertTrue(tree.getValue("E").isEmpty());
-        assertTrue(tree.getValue("").isEmpty());
     }
 
     @Test
