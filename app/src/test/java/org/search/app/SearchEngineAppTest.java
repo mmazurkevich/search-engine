@@ -39,7 +39,7 @@ public class SearchEngineAppTest {
     public void setUp() {
         tokenizer = new StandardTokenizer();
         searchEngine = new SearchEngine(tokenizer);
-        searchEngine.initialize();
+        searchEngine.initialize(progress -> { });
         searchEngine.invalidateCache();
         listener = new IndexationEventListener() {
             @Override

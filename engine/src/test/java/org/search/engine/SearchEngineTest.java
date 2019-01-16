@@ -34,7 +34,7 @@ public class SearchEngineTest {
     @Before
     public void setUp() {
         searchEngine = new SearchEngine(new WhitespaceTokenizer());
-        searchEngine.initialize();
+        searchEngine.initialize(progress -> { });
         searchEngine.invalidateCache();
     }
 

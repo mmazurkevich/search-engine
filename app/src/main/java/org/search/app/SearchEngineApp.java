@@ -10,13 +10,13 @@ import org.search.app.listener.SearchActionListener;
 import org.search.app.listener.SearchKeyListener;
 import org.search.app.model.SearchResultTableModel;
 import org.search.app.worker.FolderIndexationWorker;
+import org.search.app.worker.InitializationWorker;
 import org.search.engine.SearchEngine;
 import org.search.engine.model.SearchType;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.Collections;
-import java.util.List;
 
 import static javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED;
 import static javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED;
@@ -41,41 +41,9 @@ class SearchEngineApp extends JFrame {
         this.searchEngine = new SearchEngine();
         initUI();
         //Initialize index in thread for not blocking UI
-        SwingWorker<Void, String> worker = new SwingWorker<Void, String>() {
-
-            private static final String STARTED = "Started";
-            private static final String FINISHED = "Finished";
-            @Override
-            protected Void doInBackground() {
-                publish(STARTED);
-                searchEngine.initialize();
-                publish(FINISHED);
-                return null;
-            }
-
-            @Override
-            protected void process(List<String> list) {
-                list.forEach(it -> {
-                    switch (it) {
-                        case STARTED:
-                            cancelButton.setVisible(false);
-                            progressBar.setVisible(false);
-                            progressDescription.setText("Reading index from disk...");
-                            progressBarPanel.setVisible(true);
-                            searchField.setEditable(false);
-                            break;
-                        case FINISHED:
-                            cancelButton.setVisible(true);
-                            progressBar.setVisible(true);
-                            progressDescription.setText("");
-                            progressBarPanel.setVisible(false);
-                            searchField.setEditable(true);
-                            break;
-                    }
-                });
-            }
-        };
-        worker.execute();
+        InitializationWorker initializationWorker = new InitializationWorker(cancelButton, searchField, progressBarPanel,
+                progressDescription, progressBar, searchEngine);
+        initializationWorker.execute();
     }
 
     private void initUI() {

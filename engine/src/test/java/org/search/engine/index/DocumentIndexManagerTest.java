@@ -38,7 +38,7 @@ public class DocumentIndexManagerTest extends AbstractDocumentIndexationTest {
     @Before
     public void setUp() throws IOException, InterruptedException {
         watchService = FileSystems.getDefault().newWatchService();
-        notificationManager = new FilesystemNotificationManager(watchService, new HashSet<>(), new HashSet<>());
+        notificationManager = new FilesystemNotificationManager(watchService, new HashSet<>(), new HashSet<>(), progress -> { });
         indexedDocuments = new ConcurrentHashMap<>();
         index = new SearchEngineConcurrentTree();
         indexManager = new DocumentIndexManager(index, indexedDocuments, notificationManager, new StandardTokenizer(), new AtomicInteger(), null);

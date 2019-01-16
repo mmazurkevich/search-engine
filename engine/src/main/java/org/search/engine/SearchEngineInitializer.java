@@ -46,7 +46,7 @@ public class SearchEngineInitializer implements IndexationEventListener {
     private Future<?> lastSavingIndexTask;
 
 
-    SearchEngineInitializer() {
+    SearchEngineInitializer(SearchEngineInitializationListener listener) {
         Path folderPath = Paths.get(APP_FOLDER);
         if (!Files.exists(folderPath)) {
             try {
@@ -61,7 +61,7 @@ public class SearchEngineInitializer implements IndexationEventListener {
         index = new SearchEngineConcurrentTree();
         trackedFiles = ConcurrentHashMap.newKeySet();
         trackedFolders = ConcurrentHashMap.newKeySet();
-        loadIndex(true);
+        loadIndex(true, listener);
     }
 
     @Override
@@ -113,7 +113,7 @@ public class SearchEngineInitializer implements IndexationEventListener {
         LOG.info("Cache invalidated");
     }
 
-    public void loadIndex(boolean calculateChanges) {
+    public void loadIndex(boolean calculateChanges, SearchEngineInitializationListener listener) {
         if (!initializeTrackedFiles() || !initializeTrackedFolders() || !initializeIndex()
                 || !initializeIndexedDocuments()) {
             uniqueDocumentId.set(0);
@@ -124,13 +124,13 @@ public class SearchEngineInitializer implements IndexationEventListener {
             LOG.info("Initialized empty engine");
         } else {
             if (calculateChanges) {
-                calculateIndexChanges();
+                calculateIndexChanges(listener);
             }
             LOG.info("Engine loaded from cache");
         }
     }
 
-    private void calculateIndexChanges() {
+    private void calculateIndexChanges(SearchEngineInitializationListener listener) {
         LOG.info("Start calculating index changes");
         Set<Path> oldFolders = new HashSet<>();
         Set<Path> newFolders = new HashSet<>();
@@ -140,7 +140,10 @@ public class SearchEngineInitializer implements IndexationEventListener {
         Set<Path> oldFiles = new HashSet<>();
         Set<Path> changedFiles = new HashSet<>();
 
-        trackedFiles.forEach(file -> {
+        double percentage = (double)(trackedFiles.size() + trackedFolders.size()) / 50;
+        int currentElement = 0;
+
+        for (Path file : trackedFiles) {
             if (!Files.exists(file)) {
                 oldFiles.add(file);
             } else {
@@ -154,10 +157,12 @@ public class SearchEngineInitializer implements IndexationEventListener {
                     LOG.warn("Exception in calculation file changes: {}", file, ex);
                 }
             }
-        });
+            currentElement++;
+            listener.onInitializationProgress(Math.round(currentElement / percentage));
+        }
 
 
-        trackedFolders.forEach(folder -> {
+        for (Path folder : trackedFolders) {
             if (!Files.exists(folder)) {
                 oldFolders.add(folder);
             } else {
@@ -194,7 +199,9 @@ public class SearchEngineInitializer implements IndexationEventListener {
                     LOG.warn("Exception in walking through the folder", ex);
                 }
             }
-        });
+            currentElement++;
+            listener.onInitializationProgress(Math.round(currentElement / percentage));
+        }
 
         Set<Path> indexedFiles = new HashSet<>(indexedDocuments.keySet());
         indexedFiles.removeAll(checkedFiles);

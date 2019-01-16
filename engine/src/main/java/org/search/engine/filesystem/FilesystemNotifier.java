@@ -1,5 +1,7 @@
 package org.search.engine.filesystem;
 
+import org.search.engine.SearchEngineInitializationListener;
+
 import java.nio.file.Path;
 
 /**
@@ -88,5 +90,5 @@ public interface FilesystemNotifier {
 
     void invalidateCache();
 
-    void applyIndexChangesIfNeeded();
+    void applyIndexChangesIfNeeded(SearchEngineInitializationListener listener);
 }

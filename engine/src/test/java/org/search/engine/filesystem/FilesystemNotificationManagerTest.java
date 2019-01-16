@@ -27,7 +27,7 @@ public class FilesystemNotificationManagerTest implements FilesystemEventListene
     @Before
     public void setUp() throws IOException {
         watchService = FileSystems.getDefault().newWatchService();
-        notificationManager = new FilesystemNotificationManager(watchService, new HashSet<>(), new HashSet<>());
+        notificationManager = new FilesystemNotificationManager(watchService, new HashSet<>(), new HashSet<>(), progress -> { });
         notificationManager.addListener(this);
     }
 

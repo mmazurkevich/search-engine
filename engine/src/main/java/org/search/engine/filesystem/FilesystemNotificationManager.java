@@ -1,6 +1,7 @@
 package org.search.engine.filesystem;
 
 import org.search.engine.SearchEngineExecutors;
+import org.search.engine.SearchEngineInitializationListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,11 +37,12 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
     private final WatchService watchService;
     private ScheduledExecutorService notificationExecutor;
 
-    public FilesystemNotificationManager(WatchService watchService, Set<Path> trackedFiles, Set<Path> trackedFolders) {
+    public FilesystemNotificationManager(WatchService watchService, Set<Path> trackedFiles, Set<Path> trackedFolders,
+                                         SearchEngineInitializationListener listener) {
         this.watchService = watchService;
         this.trackedFiles = trackedFiles;
         this.trackedFolders = trackedFolders;
-        applyIndexChangesIfNeeded();
+        applyIndexChangesIfNeeded(listener);
     }
 
     /**
@@ -223,23 +225,31 @@ public class FilesystemNotificationManager implements FilesystemNotificationSche
         LOG.info("Cache invalidated");
     }
 
-    public void applyIndexChangesIfNeeded() {
-        trackedFiles.forEach(file -> {
+    public void applyIndexChangesIfNeeded(SearchEngineInitializationListener listener) {
+        double currentPercent = 50;
+        double percentage = (double) (trackedFiles.size() + trackedFolders.size()) / 50;
+        int currentElement = 0;
+
+        for (Path file : trackedFiles) {
             Path parentFolder = file.getParent();
             if (parentFolder != null) {
                 //For tracking that tracked file can be deleted
                 registerFolder(parentFolder, false);
             }
-        });
+            currentElement++;
+            listener.onInitializationProgress(Math.round(currentPercent + currentElement / percentage));
+        }
 
-        trackedFolders.forEach(folder -> {
+        for (Path folder : trackedFolders) {
             registerFolder(folder, false);
             Path parentFolder = folder.getParent();
             if (parentFolder != null && !trackedFolders.contains(parentFolder)) {
                 //For tracking that tracked folder itself can be deleted
                 registerFolder(folder.getParent(), false);
             }
-        });
+            currentElement++;
+            listener.onInitializationProgress(Math.round(currentPercent + currentElement / percentage));
+        }
         LOG.info("Finish applying index changes");
     }
 

@@ -51,11 +51,11 @@ public class SearchEngine {
         }
     }
 
-    public void initialize() {
-        engineInitializer = new SearchEngineInitializer();
+    public void initialize(SearchEngineInitializationListener listener) {
+        engineInitializer = new SearchEngineInitializer(listener);
 
         filesystemManager = new FilesystemNotificationManager(watchService, engineInitializer.getTrackedFiles(),
-                engineInitializer.getTrackedFolders());
+                engineInitializer.getTrackedFolders(), listener);
         searchManager = new SimpleSearchManager(engineInitializer.getIndex(), engineInitializer.getIndexedDocuments(),
                 tokenizer);
         indexManager = new DocumentIndexManager(engineInitializer.getIndex(), engineInitializer.getIndexedDocuments(),
@@ -96,8 +96,8 @@ public class SearchEngine {
             indexManager.cancelIndexation();
             filesystemManager.invalidateCache();
             indexManager.invalidateCache();
-            engineInitializer.loadIndex(false);
-            filesystemManager.applyIndexChangesIfNeeded();
+            engineInitializer.loadIndex(false, progress -> { });
+            filesystemManager.applyIndexChangesIfNeeded(progress -> { });
             indexManager.addListener(engineInitializer);
         } else {
             LOG.warn("Search engine not yet initialized");
