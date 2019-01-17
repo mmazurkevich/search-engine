@@ -21,67 +21,83 @@ public class SearchWorker extends SwingWorker<ReplaySubject<SearchResultEvent>, 
     private static final Logger LOG = LoggerFactory.getLogger(SearchWorker.class);
 
     private final SearchEngine searchEngine;
-    private final String searchQuery;
+    private final List<String> searchQueries;
     private final JSearchResultTable searchResultTable;
-    private final ButtonGroup searchOptionsGroup;
+    private final SearchType searchType;
 
-    public SearchWorker(SearchEngine searchEngine, String searchQuery, JSearchResultTable searchResultTable, ButtonGroup searchOptionsGroup) {
+    public SearchWorker(SearchEngine searchEngine, List<String> searchQueries, JSearchResultTable searchResultTable, SearchType searchType) {
         this.searchEngine = searchEngine;
-        this.searchQuery = searchQuery;
+        this.searchQueries = searchQueries;
         this.searchResultTable = searchResultTable;
-        this.searchOptionsGroup = searchOptionsGroup;
+        this.searchType = searchType;
     }
 
     @Override
     protected ReplaySubject<SearchResultEvent> doInBackground() {
-        SearchType searchType = SearchType.valueOf(searchOptionsGroup.getSelection().getActionCommand());
-        return searchEngine.search(searchQuery, searchType);
+        return searchEngine.search(searchQueries, searchType);
+    }
+
+    public void cancelSearch() {
+        searchEngine.cancelSearch();
+        handleSearchResult();
     }
 
     @Override
     protected void done() {
+        handleSearchResult();
+    }
+
+    private void handleSearchResult() {
         try {
             searchResultTable.getSelectionModel().clearSelection();
             SearchResultTableModel model = searchResultTable.getModel();
             model.setData(new ArrayList<>());
-            model.setSearchQuery(searchQuery);
+            model.setSearchQuery(searchQueries.get(0));
             model.fireTableDataChanged();
             ReplaySubject<SearchResultEvent> subject = get();
             if (subject != null) {
                 subject.subscribe(it -> {
-                    List<RowFile> data = model.getData();
-                    if (it != null) {
-                        switch (it.getEventType()) {
-                            case ADD:
-                                data.add(new RowFile(it.getFileName(), it.getRowNumber(), it.getPositions()));
-                                model.fireTableRowsInserted(data.size() - 1, data.size() - 1);
-                                break;
-                            case UPDATE:
+                            List<RowFile> data = model.getData();
+                            if (it != null) {
                                 int selectedRow = searchResultTable.getSelectedRow();
-                                for (int i = 0; i < data.size(); i++) {
-                                    RowFile rowFile = data.get(i);
-                                    if (rowFile.getFilePath().equals(it.getFileName()) && rowFile.getRowNumber() == it.getRowNumber()) {
-                                        rowFile.setPositions(it.getPositions());
-                                        if (selectedRow == i) {
+                                switch (it.getEventType()) {
+                                    case ADD:
+                                        data.add(new RowFile(it.getFileName(), it.getRowNumber(), it.getPositions()));
+                                        model.fireTableRowsInserted(data.size() - 1, data.size() - 1);
+                                        break;
+                                    case UPDATE:
+                                        for (int i = 0; i < data.size(); i++) {
+                                            RowFile rowFile = data.get(i);
+                                            if (rowFile.getFilePath().equals(it.getFileName()) && rowFile.getRowNumber() == it.getRowNumber()) {
+                                                rowFile.setPositions(it.getPositions());
+                                                if (selectedRow == i) {
+                                                    searchResultTable.clearSelection();
+                                                }
+                                            }
+                                        }
+                                        break;
+                                    case REMOVE:
+                                        int rowIndex = 0;
+                                        for (int i = 0; i < data.size(); i++) {
+                                            RowFile rowFile = data.get(i);
+                                            if (rowFile.getFilePath().equals(it.getFileName()) && rowFile.getRowNumber() == it.getRowNumber()) {
+                                                rowIndex = i;
+                                            }
+                                        }
+                                        model.fireTableRowsDeleted(rowIndex, rowIndex);
+                                        data.remove(rowIndex);
+                                        if (rowIndex <= selectedRow) {
                                             searchResultTable.clearSelection();
                                         }
-                                    }
+                                        break;
                                 }
-                                break;
-                            case REMOVE:
-                                int rowIndex = 0;
-                                for (int i = 0; i < data.size(); i++) {
-                                    RowFile rowFile = data.get(i);
-                                    if (rowFile.getFilePath().equals(it.getFileName()) && rowFile.getRowNumber() == it.getRowNumber()) {
-                                        rowIndex = i;
-                                    }
-                                }
-                                model.fireTableRowsDeleted(rowIndex, rowIndex);
-                                data.remove(rowIndex);
-                                break;
-                        }
-                    }
-                }, it -> LOG.warn("Exception in handling event for search result"));
+                            }
+                        }, it -> LOG.warn("Exception in handling event for search result"),
+                        () -> {
+                            model.setData(new ArrayList<>());
+                            model.setSearchQuery("");
+                            model.fireTableDataChanged();
+                        });
             }
         } catch (InterruptedException | ExecutionException | CancellationException ex) {
             LOG.warn("Getting search result task was canceled");

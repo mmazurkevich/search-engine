@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -46,7 +47,7 @@ public class SearchEngineTest {
         Thread.sleep(2000);
 
         String searchQuery = "mila";
-        ReplaySubject<SearchResultEvent> replaySubject = searchEngine.search(searchQuery, SearchType.EXACT_MATCH);
+        ReplaySubject<SearchResultEvent> replaySubject = searchEngine.search(Collections.singletonList(searchQuery), SearchType.EXACT_MATCH);
 
         List<SearchResultEvent> results = new ArrayList<>();
         replaySubject.subscribe(results::add);
@@ -59,7 +60,7 @@ public class SearchEngineTest {
         Thread.sleep(2000);
 
         searchQuery = "relieve";
-        replaySubject = searchEngine.search(searchQuery, SearchType.EXACT_MATCH);
+        replaySubject = searchEngine.search(Collections.singletonList(searchQuery), SearchType.EXACT_MATCH);
 
         results = new ArrayList<>();
         replaySubject.subscribe(results::add);

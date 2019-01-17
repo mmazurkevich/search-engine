@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.WatchService;
+import java.util.List;
 
 /**
  * The main class of the library for in-memory documents/folders indexation.
@@ -107,15 +108,23 @@ public class SearchEngine {
     /**
      * Method for searching certain query in the current index
      *
-     * @param searchQuery The query which should be searched in the index
+     * @param searchQueries The query which should be searched in the index
      * @return The list of documents which contains the searched lexeme
      */
-    public ReplaySubject<SearchResultEvent> search(String searchQuery, SearchType searchType) {
+    public ReplaySubject<SearchResultEvent> search(List<String> searchQueries, SearchType searchType) {
         if (searchManager != null) {
-            return searchManager.searchByQuery(searchQuery, searchType);
+            return searchManager.searchByQuery(searchQueries, searchType);
         } else {
             LOG.warn("Search engine not yet initialized");
             return null;
+        }
+    }
+
+    public void cancelSearch() {
+        if (searchManager != null) {
+            searchManager.cancelPrevious();
+        } else {
+            LOG.warn("Search engine not yet initialized");
         }
     }
 

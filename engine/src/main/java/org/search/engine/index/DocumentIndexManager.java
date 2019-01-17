@@ -227,13 +227,15 @@ public class DocumentIndexManager implements FilesystemEventListener, Indexation
 
     private void applyIndexChangesIfNeeded(IndexChanges indexChanges) {
         if (indexChanges != null) {
-            indexChanges.getNewFiles().forEach(file -> onFileChanged(FilesystemEvent.CREATED, file));
-            indexChanges.getChangedFiles().forEach(file -> onFileChanged(FilesystemEvent.MODIFIED, file));
-            indexChanges.getOldFiles().forEach(file -> onFileChanged(FilesystemEvent.DELETED, file));
+            new Thread(() -> {
+                indexChanges.getNewFiles().forEach(file -> onFileChanged(FilesystemEvent.CREATED, file));
+                indexChanges.getChangedFiles().forEach(file -> onFileChanged(FilesystemEvent.MODIFIED, file));
+                indexChanges.getOldFiles().forEach(file -> onFileChanged(FilesystemEvent.DELETED, file));
 
-            indexChanges.getNewFolders().forEach(folder -> onFolderChanged(FilesystemEvent.CREATED, folder));
-            indexChanges.getOldFolders().forEach(folder -> onFolderChanged(FilesystemEvent.DELETED, folder));
-            LOG.info("Finish applying index changes");
+                indexChanges.getNewFolders().forEach(folder -> onFolderChanged(FilesystemEvent.CREATED, folder));
+                indexChanges.getOldFolders().forEach(folder -> onFolderChanged(FilesystemEvent.DELETED, folder));
+                LOG.info("Finish applying index changes");
+            }).start();
         }
     }
 

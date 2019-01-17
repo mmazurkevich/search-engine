@@ -32,8 +32,9 @@ public class SimpleSearchManager implements SearchManager, SearchTreeTrackChange
     private final Tokenizer tokenizer;
     private List<DocumentMatchedRows> documentMatchedRowsList;
     private ReplaySubject<SearchResultEvent> subject;
-    private String trackedLexeme;
+    private List<String> trackedLexeme;
     private SearchType trackedSearchType;
+    private boolean isCanceled = false;
 
     public SimpleSearchManager(SearchEngineTree index, Map<Path, Document> indexedDocuments, Tokenizer tokenizer) {
         this.index = index;
@@ -46,19 +47,22 @@ public class SimpleSearchManager implements SearchManager, SearchTreeTrackChange
      * {@inheritDoc}
      */
     @Override
-    public ReplaySubject<SearchResultEvent> searchByQuery(String searchQuery, SearchType searchType) {
+    public ReplaySubject<SearchResultEvent> searchByQuery(List<String> searchQueries, SearchType searchType) {
         if (subject != null) {
             subject.onComplete();
         }
-        trackedLexeme = searchQuery;
+        isCanceled = false;
+        trackedLexeme = searchQueries;
         trackedSearchType = searchType;
         documentMatchedRowsList = new ArrayList<>();
-        if (searchQuery != null && !searchQuery.isEmpty()) {
-            LOG.debug("Searching documents by query: {} with search type: {}", searchQuery, searchType);
-            Set<Integer> value = index.getValue(searchQuery, searchType);
-            if (!value.isEmpty()) {
+        if (searchQueries != null && !searchQueries.isEmpty()) {
+            LOG.debug("Searching documents by query: {} with search type: {}", searchQueries, searchType);
+
+            Set<Integer> values = new LinkedHashSet<>();
+            searchQueries.forEach(searchQuery -> values.addAll(index.getValue(searchQuery, searchType)));
+            if (!values.isEmpty()) {
                 documentMatchedRowsList = indexedDocuments.entrySet().stream()
-                        .filter(entry -> value.contains(entry.getValue().getId()))
+                        .filter(entry -> values.contains(entry.getValue().getId()))
                         .filter(entry -> Files.exists(entry.getValue().getPath()))
                         .map(entry -> getDocumentMatchedRows(entry.getValue().getId(), entry.getValue().getPath()))
                         .filter(it -> !it.rowNumbers.isEmpty())
@@ -69,19 +73,25 @@ public class SimpleSearchManager implements SearchManager, SearchTreeTrackChange
         }
 
         subject = ReplaySubject.create();
-        documentMatchedRowsList.forEach(it -> {
-            String fileName = it.getFileName().toAbsolutePath().toString();
-            for (Map.Entry<Integer, List<Integer>> row : it.getRowNumbers().entrySet()) {
-                subject.onNext(new SearchResultEvent(fileName, row.getKey(), row.getValue(), EventType.ADD));
-            }
-        });
+        if (!isCanceled) {
+            documentMatchedRowsList.forEach(it -> {
+                String fileName = it.getFileName().toAbsolutePath().toString();
+                for (Map.Entry<Integer, List<Integer>> row : it.getRowNumbers().entrySet()) {
+                    subject.onNext(new SearchResultEvent(fileName, row.getKey(), row.getValue(), EventType.ADD));
+                }
+            });
+        }
         return subject;
     }
 
+    public void cancelPrevious() {
+        isCanceled = true;
+    }
+
     @Override
-    public String getTrackedLexeme() {
+    public List<String> getTrackedLexeme() {
         if (trackedLexeme == null)
-            return "";
+            return Collections.singletonList("");
         return trackedLexeme;
     }
 
@@ -99,18 +109,29 @@ public class SimpleSearchManager implements SearchManager, SearchTreeTrackChange
                     .filter(entry -> entry.getValue().getId() == documentId)
                     .map(Map.Entry::getValue)
                     .findFirst();
+
+            Optional<DocumentMatchedRows> optionalMatchedRows = documentMatchedRowsList.stream()
+                    .filter(it -> it.getDocumentId() == documentId)
+                    .findFirst();
             if (optional.isPresent()) {
-                Document document = optional.get();
-                String fileName = document.getPath().toAbsolutePath().toString();
-                DocumentMatchedRows documentMatchedRows = getDocumentMatchedRows(document.getId(), document.getPath());
-                for (Map.Entry<Integer, List<Integer>> row : documentMatchedRows.getRowNumbers().entrySet()) {
-                    subject.onNext(new SearchResultEvent(fileName, row.getKey(), row.getValue(), EventType.ADD));
+                String fileName;
+                if (!optionalMatchedRows.isPresent()) {
+                    Document document = optional.get();
+                    fileName = document.getPath().toAbsolutePath().toString();
+                    DocumentMatchedRows documentMatchedRows = getDocumentMatchedRows(document.getId(), document.getPath());
+                    for (Map.Entry<Integer, List<Integer>> row : documentMatchedRows.getRowNumbers().entrySet()) {
+                        subject.onNext(new SearchResultEvent(fileName, row.getKey(), row.getValue(), EventType.ADD));
+                    }
+                    documentMatchedRowsList.add(documentMatchedRows);
+                } else {
+                    DocumentMatchedRows oldMatchedRows = optionalMatchedRows.get();
+                    fileName = handleLexemeChange(oldMatchedRows);
                 }
-                documentMatchedRowsList.add(documentMatchedRows);
                 LOG.debug("Handled add tracked lexeme to document: {}", fileName);
             }
         }
     }
+
 
     @Override
     public void onTrackedLexemeUpdated(int documentId) {
@@ -119,24 +140,7 @@ public class SimpleSearchManager implements SearchManager, SearchTreeTrackChange
                 .findFirst();
         if (optional.isPresent()) {
             DocumentMatchedRows oldMatchedRows = optional.get();
-            String fileName = oldMatchedRows.getFileName().toAbsolutePath().toString();
-            Map<Integer, List<Integer>> oldRowNumbers = oldMatchedRows.getRowNumbers();
-            DocumentMatchedRows newMatchedRows = getDocumentMatchedRows(oldMatchedRows.getDocumentId(), oldMatchedRows.getFileName());
-            newMatchedRows.getRowNumbers().forEach((key, value) -> {
-                if (!oldRowNumbers.containsKey(key)) {
-                    //Add new matched rows to the results
-                    subject.onNext(new SearchResultEvent(fileName, key, value, EventType.ADD));
-                } else {
-                    //Update old rows with new positions
-                    subject.onNext(new SearchResultEvent(fileName, key, value, EventType.UPDATE));
-                    oldRowNumbers.remove(key);
-                }
-            });
-            //Remove old matched rows
-            for (Map.Entry<Integer, List<Integer>> row : oldRowNumbers.entrySet()) {
-                subject.onNext(new SearchResultEvent(fileName, row.getKey(), row.getValue(), EventType.REMOVE));
-            }
-            oldMatchedRows.setRowNumbers(newMatchedRows.getRowNumbers());
+            String fileName = handleLexemeChange(oldMatchedRows);
             LOG.debug("Handled update tracked lexeme in the document: {}", fileName);
         }
     }
@@ -148,37 +152,65 @@ public class SimpleSearchManager implements SearchManager, SearchTreeTrackChange
                 .findFirst();
         if (optional.isPresent()) {
             DocumentMatchedRows documentMatchedRows = optional.get();
-            String fileName = documentMatchedRows.getFileName().toAbsolutePath().toString();
-            for (Map.Entry<Integer, List<Integer>> row : documentMatchedRows.getRowNumbers().entrySet()) {
-                subject.onNext(new SearchResultEvent(fileName, row.getKey(), row.getValue(), EventType.REMOVE));
-            }
-            documentMatchedRowsList.remove(documentMatchedRows);
+            handleLexemeChange(documentMatchedRows);
             LOG.debug("Handled remove tracked lexeme from document: {}", documentMatchedRows.getFileName());
         }
     }
 
+    private String handleLexemeChange(DocumentMatchedRows oldMatchedRows) {
+        String fileName = oldMatchedRows.getFileName().toAbsolutePath().toString();
+        Map<Integer, List<Integer>> oldRowNumbers = oldMatchedRows.getRowNumbers();
+        DocumentMatchedRows newMatchedRows = getDocumentMatchedRows(oldMatchedRows.getDocumentId(), oldMatchedRows.getFileName());
+        newMatchedRows.getRowNumbers().forEach((key, value) -> {
+            if (!oldRowNumbers.containsKey(key)) {
+                //Add new matched rows to the results
+                subject.onNext(new SearchResultEvent(fileName, key, value, EventType.ADD));
+            } else {
+                //Update old rows with new positions
+                subject.onNext(new SearchResultEvent(fileName, key, value, EventType.UPDATE));
+                oldRowNumbers.remove(key);
+            }
+        });
+        //Remove old matched rows
+        for (Map.Entry<Integer, List<Integer>> row : oldRowNumbers.entrySet()) {
+            subject.onNext(new SearchResultEvent(fileName, row.getKey(), row.getValue(), EventType.REMOVE));
+        }
+
+        if (newMatchedRows.getRowNumbers().isEmpty()) {
+            documentMatchedRowsList.remove(oldMatchedRows);
+        } else {
+            oldMatchedRows.setRowNumbers(newMatchedRows.getRowNumbers());
+        }
+        return fileName;
+    }
+
     private DocumentMatchedRows getDocumentMatchedRows(int documentId, Path filePath) {
-        int[] rowNumber = {0};
-        Map<Integer, List<Integer>> matchedRows = new LinkedHashMap<>();
-        try (Stream<String> lines = Files.lines(filePath)) {
-            lines.forEach(line -> {
-                rowNumber[0]++;
-                List<Integer> positionsInRow = new ArrayList<>();
-                tokenizer.tokenize(line).forEach(token -> {
-                    if (trackedSearchType == SearchType.EXACT_MATCH && token.getContent().equals(trackedLexeme)) {
-                        positionsInRow.add(token.getPositionInRow());
-                    } else if (trackedSearchType == SearchType.START_WITH && token.getContent().startsWith(trackedLexeme)) {
-                        positionsInRow.add(token.getPositionInRow());
+        if (!isCanceled) {
+            int[] rowNumber = {0};
+            Map<Integer, List<Integer>> matchedRows = new LinkedHashMap<>();
+            try (Stream<String> lines = Files.lines(filePath)) {
+                lines.forEach(line -> {
+                    rowNumber[0]++;
+                    List<Integer> positionsInRow = new ArrayList<>();
+                    tokenizer.tokenize(line).forEach(token -> {
+                        if (trackedSearchType == SearchType.EXACT_MATCH && token.getContent().equals(trackedLexeme.get(0))) {
+                            positionsInRow.add(token.getPositionInRow());
+                        } else if (trackedSearchType == SearchType.WITH_SUGGESTIONS && trackedLexeme.contains(token.getContent())) {
+                            positionsInRow.add(token.getPositionInRow());
+                        } else if (trackedSearchType == SearchType.START_WITH && token.getContent().startsWith(trackedLexeme.get(0))) {
+                            positionsInRow.add(token.getPositionInRow());
+                        }
+                    });
+                    if (!positionsInRow.isEmpty()) {
+                        matchedRows.put(rowNumber[0], positionsInRow);
                     }
                 });
-                if (!positionsInRow.isEmpty()) {
-                    matchedRows.put(rowNumber[0], positionsInRow);
-                }
-            });
-        } catch (IOException | UncheckedIOException ex) {
-            LOG.warn("Detecting possible matched rows in file : {} finished with exception", filePath);
+            } catch (IOException | UncheckedIOException ex) {
+                LOG.warn("Detecting possible matched rows in file : {} finished with exception", filePath);
+            }
+            return new DocumentMatchedRows(documentId, filePath, matchedRows);
         }
-        return new DocumentMatchedRows(documentId, filePath, matchedRows);
+        return new DocumentMatchedRows(documentId, filePath, new LinkedHashMap<>());
     }
 
     private class DocumentMatchedRows {

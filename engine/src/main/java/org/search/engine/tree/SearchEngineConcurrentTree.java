@@ -148,8 +148,10 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
 
     @Override
     public void update(CharSequence key, int value) {
-        if (trackChangesListener != null && trackChangesListener.getTrackedSearchType() == SearchType.EXACT_MATCH
-                && !trackChangesListener.getTrackedLexeme().isEmpty() && trackChangesListener.getTrackedLexeme().equals(key.toString())) {
+        if (trackChangesListener != null && (trackChangesListener.getTrackedSearchType() == SearchType.EXACT_MATCH
+                || trackChangesListener.getTrackedSearchType() == SearchType.WITH_SUGGESTIONS)
+                && !trackChangesListener.getTrackedLexeme().isEmpty()
+                && trackChangesListener.getTrackedLexeme().contains(key.toString())) {
             trackChangesListener.onTrackedLexemeUpdated(value);
         }
     }
@@ -164,7 +166,7 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
         }
 
         SearchResult searchResult = searchTree(key);
-        if (searchType == SearchType.EXACT_MATCH) {
+        if (searchType == SearchType.EXACT_MATCH || searchType == SearchType.WITH_SUGGESTIONS) {
             if (searchResult.classification == Classification.EXACT_MATCH) {
                 if (searchResult.nodeFound.getValue() != null)
                     return Arrays.stream(searchResult.nodeFound.getValue().toArray()).boxed().collect(Collectors.toSet());
@@ -253,8 +255,10 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
             writeLock.unlock();
         }
 
-        if (trackChangesListener != null && trackChangesListener.getTrackedSearchType() == SearchType.EXACT_MATCH
-                && !trackChangesListener.getTrackedLexeme().isEmpty() && trackChangesListener.getTrackedLexeme().equals(key.toString())) {
+        if (trackChangesListener != null && (trackChangesListener.getTrackedSearchType() == SearchType.EXACT_MATCH
+                || trackChangesListener.getTrackedSearchType() == SearchType.WITH_SUGGESTIONS)
+                && !trackChangesListener.getTrackedLexeme().isEmpty()
+                && trackChangesListener.getTrackedLexeme().contains(key.toString())) {
             trackChangesListener.onTrackedLexemeRemoved(value);
         }
     }
@@ -315,11 +319,11 @@ public class SearchEngineConcurrentTree implements SearchEngineTree, Serializabl
     }
 
     private void notifyListenerLexemeAdded(String key, int value) {
-        if (trackChangesListener != null && trackChangesListener.getTrackedSearchType() == SearchType.EXACT_MATCH
-                && !trackChangesListener.getTrackedLexeme().isEmpty() && trackChangesListener.getTrackedLexeme().equals(key)) {
-//            new Thread(() -> {
+        if (trackChangesListener != null && (trackChangesListener.getTrackedSearchType() == SearchType.EXACT_MATCH
+                        || trackChangesListener.getTrackedSearchType() == SearchType.WITH_SUGGESTIONS)
+                && !trackChangesListener.getTrackedLexeme().isEmpty()
+                && trackChangesListener.getTrackedLexeme().contains(key)) {
                 trackChangesListener.onTrackedLexemeAdd(value);
-//            }).start();
         }
     }
 

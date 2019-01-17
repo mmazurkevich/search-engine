@@ -5,6 +5,7 @@ import org.search.app.component.JSearchResultTable;
 import org.search.app.component.SpellCheckPainter;
 import org.search.app.worker.SearchWorker;
 import org.search.engine.SearchEngine;
+import org.search.engine.model.SearchType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -13,8 +14,9 @@ import javax.swing.text.BadLocationException;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static java.awt.event.KeyEvent.*;
@@ -30,21 +32,19 @@ public class SearchKeyListener implements KeyListener {
     private final JSearchResultTable searchResultTable;
     private final ButtonGroup searchOptionsGroup;
     private final SpellCheckPainter painter;
-    private HunspellCheck hunspellCheck = null;
+    private final HunspellCheck hunspellCheck;
+    private final JLabel possibleSuggestions;
     private SearchWorker searchWorker;
 
     public SearchKeyListener(SearchEngine searchEngine, JTextField searchField, JSearchResultTable searchResultTable,
-                             ButtonGroup searchOptionsGroup) {
+                             ButtonGroup searchOptionsGroup, HunspellCheck hunspellCheck, JLabel possibleSuggestions) {
         this.searchEngine = searchEngine;
         this.searchField = searchField;
         this.searchResultTable = searchResultTable;
         this.searchOptionsGroup = searchOptionsGroup;
         this.painter = new SpellCheckPainter(Color.RED);
-        try {
-            this.hunspellCheck = new HunspellCheck();
-        } catch (URISyntaxException e) {
-            LOG.warn("Can't initialize hunspell, application will work without spellcheck");
-        }
+        this.hunspellCheck = hunspellCheck;
+        this.possibleSuggestions = possibleSuggestions;
     }
 
     @Override
@@ -58,21 +58,37 @@ public class SearchKeyListener implements KeyListener {
     @Override
     public void keyReleased(KeyEvent e) {
         if (!invalidKeys.contains(e.getKeyCode())) {
+            if (searchWorker != null && !searchWorker.isDone()) {
+                searchWorker.cancelSearch();
+            }
             handleEvent();
         }
     }
 
     private void handleEvent() {
         String searchQuery = searchField.getText();
-        spellCheck(searchQuery);
-        if (searchWorker != null && !searchWorker.isDone()) {
-            searchWorker.cancel(false);
+        possibleSuggestions.setText("");
+
+        List<String> searchQueries = new ArrayList<>();
+        searchQueries.add(searchQuery);
+
+        SearchType searchType = SearchType.valueOf(searchOptionsGroup.getSelection().getActionCommand());
+        List<String> suggestions = spellCheck(searchQuery);
+
+        if (searchType == SearchType.WITH_SUGGESTIONS) {
+            suggestions.forEach(it -> {
+                if (it.length() == searchQuery.length()) {
+                    searchQueries.add(it);
+                }
+            });
+            possibleSuggestions.setText("Possible suggestions: " + String.join(",", searchQueries));
         }
-        searchWorker = new SearchWorker(searchEngine, searchQuery, searchResultTable, searchOptionsGroup);
+
+        searchWorker = new SearchWorker(searchEngine, searchQueries, searchResultTable, searchType);
         searchWorker.execute();
     }
 
-    private void spellCheck(String searchQuery) {
+    private List<String> spellCheck(String searchQuery) {
         searchField.getHighlighter().removeAllHighlights();
         searchField.setComponentPopupMenu(null);
         if (hunspellCheck != null) {
@@ -93,8 +109,10 @@ public class SearchKeyListener implements KeyListener {
                     popup.add(menuItem);
                 });
                 searchField.setComponentPopupMenu(popup);
+                return suggestions;
             }
         }
+        return Collections.emptyList();
     }
 
 }

@@ -13,9 +13,12 @@ import org.search.app.worker.FolderIndexationWorker;
 import org.search.app.worker.InitializationWorker;
 import org.search.engine.SearchEngine;
 import org.search.engine.model.SearchType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
+import java.net.URISyntaxException;
 import java.util.Collections;
 
 import static javax.swing.ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED;
@@ -23,7 +26,10 @@ import static javax.swing.ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED;
 
 class SearchEngineApp extends JFrame {
 
+    private static final Logger LOG = LoggerFactory.getLogger(SearchEngineApp.class);
+
     private final SearchEngine searchEngine;
+    private HunspellCheck hunspellCheck = null;
 
     //UI components
     private ButtonGroup searchOptionsGroup;
@@ -34,11 +40,17 @@ class SearchEngineApp extends JFrame {
     private JSearchResultTable searchResultTable;
     private JPanel progressBarPanel;
     private JLabel progressDescription;
+    private JLabel possibleSuggestions;
     private JProgressBar progressBar;
     private FolderIndexationWorker indexationWorker;
 
     SearchEngineApp() {
         this.searchEngine = new SearchEngine();
+        try {
+            this.hunspellCheck = new HunspellCheck();
+        } catch (URISyntaxException e) {
+            LOG.warn("Can't initialize hunspell, application will work without spellcheck");
+        }
         initUI();
         //Initialize index in thread for not blocking UI
         InitializationWorker initializationWorker = new InitializationWorker(cancelButton, searchField, progressBarPanel,
@@ -105,6 +117,7 @@ class SearchEngineApp extends JFrame {
             searchEngine.invalidateCache();
             searchField.setText("");
             documentPreview.setText("");
+            possibleSuggestions.setText("");
             searchResultTable.getSelectionModel().clearSelection();
             searchResultTable.getModel().setData(Collections.emptyList());
             searchResultTable.getModel().fireTableDataChanged();
@@ -125,6 +138,7 @@ class SearchEngineApp extends JFrame {
         searchButton = new JButton("Search");
         searchOptionsGroup = new ButtonGroup();
         searchField = new JTextField();
+        possibleSuggestions = new JLabel();
 
         documentPreview = createDocumentPreviewArea();
 
@@ -138,8 +152,10 @@ class SearchEngineApp extends JFrame {
                 searchResultTable, documentPreview));
         final JScrollPane scrollPane = new JScrollPane(searchResultTable, VERTICAL_SCROLLBAR_AS_NEEDED, HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
-        searchButton.addActionListener(new SearchActionListener(searchEngine, searchField, searchResultTable, searchOptionsGroup));
-        searchField.addKeyListener(new SearchKeyListener(searchEngine, searchField, searchResultTable, searchOptionsGroup));
+        searchButton.addActionListener(new SearchActionListener(searchEngine, searchField, searchResultTable, searchOptionsGroup,
+                hunspellCheck, possibleSuggestions));
+        searchField.addKeyListener(new SearchKeyListener(searchEngine, searchField, searchResultTable, searchOptionsGroup,
+                hunspellCheck, possibleSuggestions));
 
         //Creating search form with options
         panel.add(createSearchPanelWithOptions(), BorderLayout.PAGE_START);
@@ -176,16 +192,23 @@ class SearchEngineApp extends JFrame {
         startWithButton.setActionCommand(SearchType.START_WITH.name());
         startWithButton.addActionListener(it -> searchButton.doClick());
 
+        JRadioButton withSuggestionsButton = new JRadioButton("With suggestions");
+        withSuggestionsButton.setActionCommand(SearchType.WITH_SUGGESTIONS.name());
+        withSuggestionsButton.addActionListener(it -> searchButton.doClick());
+
         searchOptionsGroup.add(exactMatchButton);
         searchOptionsGroup.add(startWithButton);
+        searchOptionsGroup.add(withSuggestionsButton);
 
         JPanel optionsPanel = new JPanel();
         optionsPanel.setLayout(new BoxLayout(optionsPanel, BoxLayout.LINE_AXIS));
         optionsPanel.add(exactMatchButton);
         optionsPanel.add(startWithButton);
+        optionsPanel.add(withSuggestionsButton);
 
         JPanel searchOptionsPanel = new JPanel(new BorderLayout());
         searchOptionsPanel.add(optionsPanel, BorderLayout.EAST);
+        searchOptionsPanel.add(possibleSuggestions, BorderLayout.WEST);
 
         searchPanelWithOptions.add(searchPanel);
         searchPanelWithOptions.add(searchOptionsPanel);

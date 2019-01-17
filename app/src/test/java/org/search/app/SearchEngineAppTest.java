@@ -115,7 +115,7 @@ public class SearchEngineAppTest {
 
         @Override
         public Boolean call() {
-            ReplaySubject<SearchResultEvent> replaySubject = searchEngine.search(searchQuery, SearchType.EXACT_MATCH);
+            ReplaySubject<SearchResultEvent> replaySubject = searchEngine.search(Collections.singletonList(searchQuery), SearchType.EXACT_MATCH);
             List<SearchResultEvent> results = new ArrayList<>();
             replaySubject.subscribe(results::add);
             return results.stream().anyMatch(it -> it.getFileName().equals(fileName));
